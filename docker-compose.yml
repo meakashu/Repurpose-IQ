@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  # PostgreSQL for audit trails
+  postgres:
+    image: postgres:15-alpine
+    container_name: pharma-postgres
+    environment:
+      POSTGRES_DB: pharma_audit
+      POSTGRES_USER: pharma_user
+      POSTGRES_PASSWORD: pharma_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pharma_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: pharma-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Python Agent Service
+  python-service:
+    build:
+      context: ./python-service
+      dockerfile: Dockerfile
+    container_name: pharma-python-service
+    environment:
+      - ENVIRONMENT=production
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=pharma_audit
+      - POSTGRES_USER=pharma_user
+      - POSTGRES_PASSWORD=pharma_password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./python-service/data:/app/data
+      - ./python-service/logs:/app/logs
+    restart: unless-stopped
+
+  # Node.js Backend
+  node-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pharma-node-backend
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - PYTHON_SERVICE_URL=http://python-service:8000
+      - USE_PYTHON_AGENTS=true
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - python-service
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+

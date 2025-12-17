@@ -1,0 +1,900 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Snap Inc. Inspired Theme Colors - Yellow & Black */
+:root {
+  --theme-primary: #000000;
+  --theme-primary-dark: #000000;
+  --theme-secondary: #FFFC00;
+  --theme-accent: #FFFC00;
+  --theme-success: #000000;
+  --theme-warning: #FFFC00;
+  --theme-danger: #000000;
+  --theme-bg: #FFFC00;
+  --theme-card: #FFFFFF;
+  --theme-text: #000000;
+  --theme-text-light: #333333;
+  --theme-border: #000000;
+  --theme-shadow: rgba(0, 0, 0, 0.1);
+  --theme-yellow: #FFFC00;
+  --theme-black: #000000;
+}
+
+@layer base {
+  * {
+    @apply font-inter;
+  }
+  
+  body {
+    @apply min-h-screen;
+    background: var(--theme-bg);
+    color: var(--theme-text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  
+  h1 {
+    font-family: 'Space Grotesk', 'Manrope', sans-serif;
+    font-weight: 700;
+    color: var(--theme-text);
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+  
+  h2 {
+    font-family: 'DM Sans', 'Raleway', sans-serif;
+    font-weight: 600;
+    color: var(--theme-text);
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+  }
+  
+  h3 {
+    font-family: 'Poppins', 'Montserrat', sans-serif;
+    font-weight: 600;
+    color: var(--theme-text);
+    letter-spacing: -0.005em;
+  }
+  
+  h4, h5, h6 {
+    font-family: 'Manrope', 'DM Sans', sans-serif;
+    font-weight: 600;
+    color: var(--theme-text);
+  }
+  
+  p, span, div, a, button, label {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  
+  code, pre, .mono {
+    font-family: 'JetBrains Mono', 'Space Mono', monospace;
+    font-feature-settings: 'liga' 1, 'calt' 1;
+  }
+  
+  /* Ensure proper alignment and spacing */
+  * {
+    box-sizing: border-box;
+  }
+  
+  /* Remove default margins for better alignment */
+  h1, h2, h3, h4, h5, h6, p {
+    margin: 0;
+  }
+}
+
+/* Snap-Inspired Card Styles - Crisp borders and shadows */
+.medical-card {
+  @apply rounded-xl border-2 border-black;
+  background: var(--theme-card);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.medical-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--theme-border);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.medical-card-header {
+  @apply px-6 py-4 border-b-2 border-black;
+  background: var(--theme-black);
+  @apply text-white rounded-t-xl;
+  color: var(--theme-yellow);
+}
+
+.medical-card-body {
+  @apply p-6;
+  background: var(--theme-card);
+  color: var(--theme-text);
+}
+
+/* Snap-Inspired Button Styles - Pill-shaped like Snap Inc. */
+.btn-medical-primary {
+  @apply px-8 py-3 rounded-full font-semibold;
+  background: var(--theme-black);
+  color: var(--theme-yellow);
+  border: 2px solid var(--theme-black);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-family: 'DM Sans', 'Manrope', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+}
+
+.btn-medical-primary:hover {
+  background: var(--theme-black);
+  color: var(--theme-yellow);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.btn-medical-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-medical-secondary {
+  @apply px-8 py-3 rounded-full font-semibold;
+  background: var(--theme-card);
+  color: var(--theme-black);
+  border: 2px solid var(--theme-black);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+.btn-medical-secondary:hover {
+  background: var(--theme-black);
+  color: var(--theme-yellow);
+  border-color: var(--theme-black);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-medical-secondary:active {
+  transform: translateY(0);
+}
+
+/* Snap-Inspired Input Styles */
+.medical-input {
+  @apply w-full px-4 py-3 rounded-lg border-2;
+  border-color: var(--theme-border);
+  @apply focus:outline-none focus:border-black;
+  @apply transition-all duration-200;
+  background: var(--theme-card);
+  color: var(--theme-text);
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.medical-input:focus {
+  box-shadow: 0 0 0 3px rgba(255, 252, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-color: var(--theme-black);
+  background: var(--theme-card);
+}
+
+.medical-input::placeholder {
+  color: var(--theme-text-light);
+  opacity: 0.6;
+}
+
+.medical-label {
+  @apply block text-sm font-semibold mb-2;
+  color: var(--theme-text);
+  font-family: 'Manrope', 'DM Sans', sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* Snap-Inspired Badge Styles */
+.medical-badge {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border-2;
+  border-color: var(--theme-black);
+}
+
+.badge-primary {
+  background: var(--theme-black);
+  color: var(--theme-yellow);
+  border-color: var(--theme-black);
+}
+
+.badge-success {
+  background: var(--theme-card);
+  color: var(--theme-black);
+  border-color: var(--theme-black);
+}
+
+.badge-warning {
+  background: var(--theme-yellow);
+  color: var(--theme-black);
+  border-color: var(--theme-black);
+}
+
+.badge-danger {
+  background: var(--theme-card);
+  color: var(--theme-black);
+  border-color: var(--theme-black);
+}
+
+/* Snap-Inspired Sidebar */
+.medical-sidebar {
+  @apply border-r-2 border-black;
+  background: var(--theme-card);
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.medical-nav-item {
+  @apply flex items-center gap-3 px-4 py-3 rounded-lg transition-all;
+  color: var(--theme-text);
+  @apply hover:bg-yellow-200 hover:text-black;
+}
+
+.medical-nav-item.active {
+  @apply font-semibold;
+  background: var(--theme-black);
+  color: var(--theme-yellow);
+  border-left: 4px solid var(--theme-yellow);
+}
+
+/* Snap-Inspired Table Styles */
+.medical-table {
+  @apply w-full rounded-lg overflow-hidden border-2 border-black;
+  background: var(--theme-card);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.medical-table thead {
+  background: var(--theme-black);
+  color: var(--theme-yellow);
+}
+
+.medical-table th {
+  @apply px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider;
+  font-family: 'Manrope', 'DM Sans', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--theme-yellow);
+}
+
+.medical-table td {
+  @apply px-6 py-4 text-sm;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  color: var(--theme-text);
+}
+
+.medical-table tbody tr {
+  @apply border-b-2 border-black hover:bg-yellow-100 transition-colors;
+}
+
+/* Snap-Inspired Status Indicators */
+.status-indicator {
+  @apply inline-block w-3 h-3 rounded-full mr-2 border-2;
+  border-color: var(--theme-black);
+}
+
+.status-active {
+  background: var(--theme-black);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+}
+
+.status-inactive {
+  background: var(--theme-card);
+  border-color: var(--theme-black);
+}
+
+.status-pending {
+  background: var(--theme-yellow);
+  border-color: var(--theme-black);
+}
+
+/* Medical Form Styles */
+.medical-form-group {
+  @apply mb-6;
+}
+
+.medical-form-error {
+  @apply text-sm mt-1 font-semibold;
+  color: var(--theme-black);
+}
+
+.medical-form-help {
+  @apply text-sm mt-1;
+  color: var(--theme-text-light);
+}
+
+/* Snap-Inspired Header */
+.medical-header {
+  @apply border-b-2 border-black px-6 py-4;
+  background: var(--theme-card);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Medical Stats Card */
+.medical-stat-card {
+  @apply medical-card p-6;
+}
+
+.medical-stat-value {
+  @apply text-3xl font-bold;
+  color: var(--theme-text);
+  font-family: 'Space Grotesk', 'Manrope', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.medical-stat-label {
+  @apply text-sm mt-1;
+  color: var(--theme-text-light);
+  font-family: 'DM Sans', 'Inter', sans-serif;
+  font-weight: 400;
+}
+
+.medical-stat-change {
+  @apply text-xs font-semibold mt-2;
+}
+
+.stat-positive {
+  @apply text-green-600;
+}
+
+.stat-negative {
+  @apply text-red-600;
+}
+
+/* Snap-Inspired Alert Styles */
+.medical-alert {
+  @apply p-4 rounded-lg border-l-4 mb-4 border-2 border-black;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.alert-info {
+  background: var(--theme-card);
+  color: var(--theme-text);
+  border-color: var(--theme-black);
+  border-left-color: var(--theme-black);
+  border-left-width: 4px;
+}
+
+.alert-success {
+  background: var(--theme-card);
+  color: var(--theme-text);
+  border-color: var(--theme-black);
+  border-left-color: var(--theme-black);
+  border-left-width: 4px;
+}
+
+.alert-warning {
+  background: var(--theme-yellow);
+  color: var(--theme-black);
+  border-color: var(--theme-black);
+  border-left-color: var(--theme-black);
+  border-left-width: 4px;
+}
+
+.alert-danger {
+  background: var(--theme-card);
+  color: var(--theme-text);
+  border-color: var(--theme-black);
+  border-left-color: var(--theme-black);
+  border-left-width: 4px;
+}
+
+/* Snap-Inspired Loading Spinner */
+.medical-spinner {
+  @apply inline-block w-6 h-6 border-4 rounded-full;
+  border-color: var(--theme-yellow);
+  border-top-color: var(--theme-black);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Chat message styling */
+.medical-message {
+  @apply p-4 rounded-xl;
+  border: 2px solid var(--theme-black);
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.message-user {
+  background: white;
+  border-color: var(--theme-black);
+}
+
+.message-assistant {
+  background: #FFFEF5; /* Very light yellow tint */
+  border-color: var(--theme-black);
+}
+
+/* Medical Scrollbar */
+.medical-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.medical-scrollbar::-webkit-scrollbar-track {
+  background: var(--theme-card);
+  border-left: 2px solid var(--theme-black);
+  border-radius: 4px;
+}
+
+.medical-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--theme-black);
+  border-radius: 4px;
+}
+
+.medical-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-text);
+}
+
+/* Medical Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.medical-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Snap-Inspired Icon Styles */
+.medical-icon {
+  @apply w-12 h-12 rounded-lg flex items-center justify-center;
+  background: var(--theme-black);
+  color: var(--theme-yellow);
+}
+
+/* Snap-Inspired Divider */
+.medical-divider {
+  @apply border-t-2 border-black my-6;
+}
+
+/* Medical Empty State */
+.medical-empty-state {
+  @apply text-center py-12;
+}
+
+.medical-empty-state-icon {
+  @apply text-6xl mb-4;
+  color: var(--theme-text-light);
+}
+
+.medical-empty-state-text {
+  color: var(--theme-text-light);
+}
+
+/* Typography Styles - Mixed Fonts for Unique UI/UX */
+.text-hero {
+  font-family: 'Space Grotesk', 'Manrope', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  text-rendering: optimizeLegibility;
+}
+
+.text-display {
+  font-family: 'DM Sans', 'Raleway', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.text-heading {
+  font-family: 'Poppins', 'Montserrat', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.text-subheading {
+  font-family: 'Manrope', 'DM Sans', sans-serif;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.text-body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 400;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+}
+
+.text-body-bold {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.text-accent {
+  font-family: 'Raleway', 'Montserrat', sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.text-mono {
+  font-family: 'JetBrains Mono', 'Space Mono', monospace;
+  font-weight: 400;
+  font-feature-settings: 'liga' 1, 'calt' 1;
+}
+
+.text-serif {
+  font-family: 'Playfair Display', 'Lora', serif;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.text-label {
+  font-family: 'Manrope', 'DM Sans', sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.text-button {
+  font-family: 'DM Sans', 'Manrope', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.text-block {
+  margin: 0;
+  max-width: 100%;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 400;
+  font-size: clamp(18px, 3vw, 36px);
+  color: var(--theme-text);
+  line-height: 1.7;
+}
+
+.text-block .char {
+  will-change: transform;
+  display: inline-block;
+  transition: transform 0.1s ease;
+}
+
+/* Locomotive Scroll Styles */
+html.has-scroll-smooth {
+  overflow: hidden;
+}
+
+html.has-scroll-dragging {
+  user-select: none;
+}
+
+.has-scroll-smooth body {
+  overflow: hidden;
+}
+
+.has-scroll-smooth [data-scroll-container] {
+  min-height: 100vh;
+  position: relative;
+}
+
+[data-scroll-direction="horizontal"] [data-scroll-container] {
+  height: 100vh;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+[data-scroll-direction="horizontal"] [data-scroll-section] {
+  display: inline-block;
+  vertical-align: top;
+  white-space: nowrap;
+  height: 100%;
+}
+
+.c-scrollbar {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 11px;
+  height: 100%;
+  transform-origin: center right;
+  transition: transform 0.3s, opacity 0.3s;
+  opacity: 0;
+}
+
+.c-scrollbar:hover {
+  transform: scaleX(1.45);
+}
+
+.c-scrollbar:hover,
+.has-scroll-scrolling .c-scrollbar,
+.has-scroll-dragging .c-scrollbar {
+  opacity: 1;
+}
+
+.c-scrollbar_thumb {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: rgba(255, 255, 255, 0.3);
+  opacity: 0.5;
+  width: 7px;
+  border-radius: 10px;
+  margin: 2px;
+  cursor: -webkit-grab;
+  cursor: grab;
+}
+
+.has-scroll-dragging .c-scrollbar_thumb {
+  cursor: -webkit-grabbing;
+  cursor: grabbing;
+}
+
+/* Ensure proper stacking for Home page */
+[data-scroll-container] {
+  position: relative;
+  z-index: 1;
+}
+
+[data-scroll-section] {
+  position: relative;
+}
+
+/* Swup-like Page Transitions */
+.swup-transition-container {
+  position: relative;
+  width: 100%;
+  min-height: 100%;
+}
+
+.swup-transition {
+  width: 100%;
+  min-height: 100%;
+  position: relative;
+}
+
+/* Page transition wrapper */
+[data-swup-transition] {
+  width: 100%;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Smooth page transitions */
+.swup-transition-enter {
+  animation: swupFadeIn 0.4s ease-out;
+}
+
+.swup-transition-exit {
+  animation: swupFadeOut 0.3s ease-in;
+}
+
+@keyframes swupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes swupFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.98);
+    filter: blur(10px);
+  }
+}
+
+/* Slide transition */
+.swup-slide-enter {
+  animation: swupSlideIn 0.4s ease-out;
+}
+
+.swup-slide-exit {
+  animation: swupSlideOut 0.3s ease-in;
+}
+
+@keyframes swupSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes swupSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-100px);
+  }
+}
+
+/* Overlay transition */
+.swup-overlay-enter {
+  animation: swupOverlayIn 0.5s ease-out;
+}
+
+.swup-overlay-exit {
+  animation: swupOverlayOut 0.3s ease-in;
+}
+
+@keyframes swupOverlayIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes swupOverlayOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.1);
+  }
+}
+
+/* Prevent layout shift during transitions */
+.swup-transition-container * {
+  will-change: transform, opacity;
+}
+
+/* Loading indicator for page transitions */
+.swup-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--medical-primary);
+  z-index: 9999;
+  animation: swupLoading 0.5s ease-out;
+}
+
+@keyframes swupLoading {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+/* Enhanced swup link styles */
+.swup-link {
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.swup-link:hover {
+  transform: translateX(2px);
+}
+
+.swup-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--medical-primary);
+  transition: width 0.3s ease;
+}
+
+.swup-link:hover::after,
+.swup-link.active::after {
+  width: 100%;
+}
+
+/* Smooth page transition effects */
+.swup-transition-container {
+  transition: opacity 0.3s ease;
+}
+
+/* Prevent flash of unstyled content during transitions */
+.swup-transition-container * {
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Alignment and Spacing Utilities */
+.container-aligned {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.section-spacing {
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+}
+
+/* Ensure proper text alignment */
+.text-aligned {
+  text-align: left;
+}
+
+@media (min-width: 768px) {
+  .text-aligned {
+    text-align: left;
+  }
+}
+
+/* Grid alignment */
+.grid-aligned {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* Flex alignment utilities */
+.flex-aligned {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.flex-aligned-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-aligned-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Snap-Inspired Background */
+.engaging-bg {
+  background: var(--theme-bg);
+}
+
+/* Ensure all pages use yellow background */
+.min-h-screen {
+  background: var(--theme-bg);
+}

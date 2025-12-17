@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RepurposeIQ - Intelligent Drug Repurposing Platform</title>
+    
+    <!-- Google Fonts - Mixed Fonts for Unique Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&family=Roboto:wght@300;400;500;700&family=Montserrat:wght@400;500;600;700;800&family=Raleway:wght@400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&family=Lora:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <div style="display: none;"></div>
+    <div id="div-1"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Reorder vite-error-overlay when it appears
+      // Target: overlay at index 2, with div[1] (div-1) as next sibling
+      function reorderViteErrorOverlay() {
+        const overlay = document.querySelector('vite-error-overlay');
+        const div1 = document.getElementById('div-1');
+        
+        if (overlay && div1) {
+          // Check if overlay's next sibling is div1
+          if (overlay.nextSibling !== div1) {
+            // Move overlay to be right before div1
+            if (div1.parentNode) {
+              div1.parentNode.insertBefore(overlay, div1);
+            }
+          }
+        }
+      }
+      
+      // Check immediately and also watch for when overlay is added
+      reorderViteErrorOverlay();
+      
+      // Use MutationObserver to watch for overlay insertion
+      const observer = new MutationObserver(() => {
+        reorderViteErrorOverlay();
+      });
+      
+      observer.observe(document.body, {
+        childList: true,
+        subtree: false
+      });
+    </script>
+  </body>
+</html>
+

@@ -1,0 +1,39 @@
+{
+    "comment": "Use this data for your Demo Video. Hardcode this into your UI or mention it in your script.",
+    "molecule": "Sitagliptin",
+    "agents": {
+        "iqvia_insights_agent": {
+            "source": "IQVIA Mock API",
+            "market_size_global": "3.2 Billion USD",
+            "cagr_oncology": "5.4%",
+            "projected_growth": "Stable",
+            "competitors": [
+                "Januvia",
+                "Galvus",
+                "Trajenta"
+            ]
+        },
+        "exim_trends_agent": {
+            "source": "EXIM Mock Server",
+            "api_import_volume_mt": 450,
+            "primary_sourcing_region": "APAC (India/China)",
+            "supply_chain_risk": "HIGH",
+            "risk_reason": "Dependency on single-source supplier in Guangdong region."
+        },
+        "patent_landscape_agent": {
+            "source": "USPTO API Clone",
+            "patent_expiry_date": "2026-05-24",
+            "freedom_to_operate": "Conditional",
+            "generic_entry_risk": "Imminent (Generic filings detected)"
+        },
+        "clinical_trials_agent": {
+            "source": "Clinical API Stub",
+            "active_trials_count": 3,
+            "new_indication_opportunity": "Breast Cancer (Adjuvant Therapy)",
+            "phase_distribution": {
+                "Phase 2": 2,
+                "Phase 3": 1
+            }
+        }
+    }
+}
