@@ -9,6 +9,11 @@
 [![Agentic AI](https://img.shields.io/badge/Agentic-AI-blue?style=for-the-badge)](https://github.com)
 [![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-green?style=for-the-badge)](https://github.com)
 
+> **🔗 Quick Access**
+> - **Deployed Prototype:** [`repurpose-iq-stys.vercel.app`](https://repurpose-iq-stys.vercel.app/)
+> - **EY Techathon 6.0 Final Demo Video:** [`youtu.be/Mg9pWK6LoZI`](https://youtu.be/Mg9pWK6LoZI)
+> - **GitHub Code (this repo):** [`github.com/meakashu/Repurpose-IQ`](https://github.com/meakashu/Repurpose-IQ)
+
 ---
 
 ## 📋 Table of Contents
