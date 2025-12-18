@@ -1,3 +1,6 @@
+<!-- Live Demo Badge (shown at the very top on GitHub) -->
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-success?style=for-the-badge&logo=vercel)](https://repurpose-iq-stys-git-main-akash-singhs-projects-9d2c0a91.vercel.app/)
+
 # RepurposeIQ 🧬
 
 ### *Accelerating Pharmaceutical Drug Repurposing from Months to Minutes through Agentic AI*
@@ -5,7 +8,6 @@
 [![EY Techathon 6.0](https://img.shields.io/badge/EY%20Techathon-6.0-yellow?style=for-the-badge)](https://www.ey.com)
 [![Agentic AI](https://img.shields.io/badge/Agentic-AI-blue?style=for-the-badge)](https://github.com)
 [![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-green?style=for-the-badge)](https://github.com)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-success?style=for-the-badge&logo=vercel)](https://repurpose-iq-stys-git-main-akash-singhs-projects-9d2c0a91.vercel.app/)
 
 ---
 
