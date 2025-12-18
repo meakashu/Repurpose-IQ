@@ -6,12 +6,18 @@ let groq = null;
 function getGroqClient() {
   if (!groq) {
     const apiKey = process.env.GROQ_API_KEY;
+
+    // In demo / Vercel environments we want the app to keep working
+    // even if the key is not configured. Instead of throwing and
+    // breaking the whole query flow, we log a warning and return null.
     if (!apiKey) {
-      throw new Error('GROQ_API_KEY environment variable is missing. Please set it in your .env file.');
+      console.warn(
+        '[Groq AI] GROQ_API_KEY is not set. Running in demo fallback mode with mock AI responses.'
+      );
+      return null;
     }
-    groq = new Groq({
-      apiKey: apiKey
-    });
+
+    groq = new Groq({ apiKey });
   }
   return groq;
 }
@@ -19,6 +25,22 @@ function getGroqClient() {
 export async function chatCompletion(messages, options = {}) {
   try {
     const client = getGroqClient();
+
+    // If Groq is not configured, return a helpful mock response so the
+    // rest of the pipeline (MasterAgent, UI, etc.) still works in demos.
+    if (!client) {
+      return `
+Groq AI is not configured for this deployment, so you are seeing a **simulated demo response** instead of a live LLM call.
+
+Here is how RepurposeIQ would normally handle your request:
+
+- The Master Agent would orchestrate Clinical, Patent, Market and Web Intelligence agents
+- Each agent would analyze its data source (mock IQVIA, USPTO, ClinicalTrials, Tavily, etc.)
+- Groq AI (LLaMA 3.3 70B) would synthesize the findings into a strategic report
+
+In a production environment, set the GROQ_API_KEY environment variable to enable real Groq-powered analysis.
+`;
+    }
     
     // Log that we're calling Groq API (for debugging)
     console.log('[Groq AI] Calling Groq API with model:', process.env.GROQ_MODEL || 'llama-3.3-70b-versatile');
@@ -56,6 +78,13 @@ export async function chatCompletion(messages, options = {}) {
 export async function streamCompletion(messages, onChunk) {
   try {
     const client = getGroqClient();
+    if (!client) {
+      // For stream mode, just send a short mock explanation.
+      onChunk(
+        'Groq AI is not configured for this deployment. Set GROQ_API_KEY in your environment to enable live streaming responses.'
+      );
+      return;
+    }
     const stream = await client.chat.completions.create({
       model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
       messages: messages,
