@@ -143,8 +143,8 @@ const testWorkflows = async () => {
     description: 'Test',
     steps: JSON.stringify([{ type: 'query', query: 'test' }])
   }, { headers });
-  
-  const workflowId = createResponse.data.id;
+  // Support both legacy `{ workflow: { id } }` and newer `{ id, workflow }` shapes
+  const workflowId = createResponse.data.workflow?.id || createResponse.data.id;
   
   // Test get workflow
   await axios.get(`${BASE_URL}/api/workflows/${workflowId}`, { headers });

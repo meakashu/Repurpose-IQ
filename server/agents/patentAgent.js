@@ -98,25 +98,62 @@ export class PatentAgent {
   getExpiryTimeline(years) {
     const data = usptoAPIClone.getPatentExpiryTimeline(years);
     
+    // Aggressive deduplication: collect ALL patents first, then deduplicate globally
+    const allPatents = [];
+    Object.values(data.timeline_by_year || {}).forEach(patents => {
+      allPatents.push(...patents);
+    });
+    
+    // Deduplicate by molecule + patent_number combination
+    const seenPatents = new Map();
+    allPatents.forEach(p => {
+      const key = `${p.molecule}|${p.patent_number}`;
+      if (!seenPatents.has(key)) {
+        seenPatents.set(key, p);
+      }
+    });
+    
+    // Rebuild timeline with unique patents only
+    const deduplicatedTimeline = {};
+    seenPatents.forEach((patent, key) => {
+      const year = new Date(patent.expiry_date).getFullYear();
+      if (!deduplicatedTimeline[year]) {
+        deduplicatedTimeline[year] = [];
+      }
+      deduplicatedTimeline[year].push(patent);
+    });
+    
+    // Deduplicate opportunities
+    const seenOpps = new Map();
+    (data.opportunities || []).forEach(opp => {
+      const key = `${opp.molecule}|${opp.patent_number}`;
+      if (!seenOpps.has(key)) {
+        seenOpps.set(key, opp);
+      }
+    });
+    const uniqueOpportunities = Array.from(seenOpps.values());
+    
     let result = `## Patent Expiry Timeline (Next ${years} Years)\n\n`;
     result += `**Summary:**\n`;
-    result += `- Patents Expiring: ${data.expiring_patents}\n\n`;
+    result += `- Unique Patents Expiring: ${seenPatents.size}\n`;
+    result += `- Total Patent Records Found: ${data.expiring_patents}\n\n`;
     
     result += `**Timeline by Year:**\n\n`;
-    Object.entries(data.timeline_by_year).forEach(([year, patents]) => {
-      result += `**${year}:** ${patents.length} patents expiring\n`;
+    Object.entries(deduplicatedTimeline).sort(([a], [b]) => a - b).forEach(([year, patents]) => {
+      result += `**${year}:** ${patents.length} unique patent(s) expiring\n`;
+      // Show ALL unique patents (should be manageable now)
       patents.forEach(p => {
         result += `- ${p.molecule} (${p.patent_number}) - Expires: ${p.expiry_date}\n`;
       });
       result += `\n`;
     });
     
-    if (data.opportunities.length > 0) {
-      result += `**Opportunities:**\n\n`;
+    if (uniqueOpportunities.length > 0) {
+      result += `**Key Opportunities:**\n\n`;
       result += "| Molecule | Patent Number | Expiry Date | Years Until Expiry | Opportunity Type |\n";
       result += "|----------|--------------|-------------|-------------------|------------------|\n";
       
-      data.opportunities.forEach(opp => {
+      uniqueOpportunities.forEach(opp => {
         result += `| ${opp.molecule} | ${opp.patent_number} | ${opp.expiry_date} | ${opp.years_until_expiry} | ${opp.opportunity_type} |\n`;
       });
     }

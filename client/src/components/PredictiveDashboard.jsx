@@ -45,7 +45,7 @@ export default function PredictiveDashboard({ molecule, indication, onClose }) {
     setLoading(true);
     try {
       // Fetch repurposing success prediction
-      const predResponse = await api.post('/api/predictions/repurposing-success', {
+      const predResponse = await api.post('/predictions/repurposing-success', {
         molecule,
         indication,
         therapy_area: 'oncology', // Could be extracted from context
@@ -64,7 +64,7 @@ export default function PredictiveDashboard({ molecule, indication, onClose }) {
       }
 
       // Fetch market forecast
-      const forecastResponse = await api.post('/api/predictions/market-forecast', {
+      const forecastResponse = await api.post('/predictions/market-forecast', {
         molecule,
         indication,
         current_market_size: 1000,

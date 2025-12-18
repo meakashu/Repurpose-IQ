@@ -79,6 +79,18 @@ app.use('/api/suggestions', suggestionsRoutes);
 import sentimentRoutes from './routes/sentiment.js';
 app.use('/api/sentiment', sentimentRoutes);
 
+// User preferences route
+import userRoutes from './routes/user.js';
+app.use('/api/user', userRoutes);
+
+// Knowledge Graph route (proxies to Python service)
+import graphRoutes from './routes/graph.js';
+app.use('/api/graph', graphRoutes);
+
+// Predictions route (proxies to Python service)
+import predictionsRoutes from './routes/predictions.js';
+app.use('/api/predictions', predictionsRoutes);
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({
@@ -103,7 +115,10 @@ app.get('/', (req, res) => {
       reports: '/api/reports',
       conversations: '/api/conversations',
       analytics: '/api/analytics',
-      audit: '/api/audit'
+      audit: '/api/audit',
+      graph: '/api/graph',
+      predictions: '/api/predictions',
+      user: '/api/user'
     },
     frontend: process.env.CLIENT_URL || 'http://localhost:5173',
     documentation: 'Access the frontend application at the URL above'

@@ -25,7 +25,9 @@ router.post('/', verifyAuth, async (req, res) => {
       ...req.body,
       userId: req.user.userId
     });
-    res.json({ workflow });
+    // Return both a top-level id and the full workflow object for compatibility
+    // Shape: { id, workflow: { ... } }
+    res.json({ id: workflow.id, workflow });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

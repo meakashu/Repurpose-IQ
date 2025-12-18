@@ -5,7 +5,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 4000, // Timeout after 4 seconds to force fallback
+  timeout: 60000, // 60 seconds timeout (increased for AI queries)
   headers: {
     'Content-Type': 'application/json',
   },
@@ -69,38 +69,12 @@ api.interceptors.response.use(
       return Promise.resolve({ data: { success: true }, status: 200 });
     }
 
-    // Mock Chat Query (Professional Enterprise Response)
+    // DO NOT use mock data for Chat Query - let it fail so user knows backend is down
+    // Chat queries should always use real Groq AI, not mock data
     if (error.config && error.config.url && error.config.url.match(/query/i)) {
-      // Parse query from body
-      let userQuery = '';
-      try {
-        const data = JSON.parse(error.config.data);
-        userQuery = data.query || '';
-      } catch (e) { }
-
-      // Use professional response generator (imported at top)
-      const result = generateProfessionalResponse(userQuery);
-
-      // If domain restricted, return rejection
-      if (result.isDomainRestricted) {
-        return Promise.resolve({
-          data: {
-            response: result.response,
-            agents: [],
-            sources: []
-          },
-          status: 200
-        });
-      }
-
-      return Promise.resolve({
-        data: {
-          response: result.response,
-          agents: result.agents,
-          sources: result.sources
-        },
-        status: 200
-      });
+      console.error('Chat query request failed. Backend may be down or unreachable:', error.message);
+      // Reject the error so the UI can show proper error message
+      return Promise.reject(error);
     }
 
     // Mock Sentiment Analysis

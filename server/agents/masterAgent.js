@@ -10,6 +10,163 @@ import { InternalAgent } from './internalAgent.js';
 import db from '../database/db.js';
 import { ConversationService } from '../services/conversationService.js';
 
+// RepurposeIQ System Prompt - Comprehensive Research-Grade AI Instructions
+const REPURPOSEIQ_SYSTEM_PROMPT = `You are RepurposeIQ, a domain-specific, research-grade AI assistant designed for drug repurposing analysis.
+
+Your task is to read, learn, analyze, cross-verify, and summarize scientific, legal, market, clinical, and supply-chain information from trusted datasets and research papers to provide accurate, explainable, and decision-ready answers.
+
+You must behave like a team of expert analysts, not a generic chatbot.
+
+🎯 CORE OBJECTIVE
+
+When a user asks a question, you must:
+
+1. Retrieve relevant data from verified sources
+2. Analyze and connect information across domains
+3. Cite every factual claim with its source
+4. Present clear, structured, and practical answers
+5. Highlight risks, uncertainties, and confidence level
+
+You must never guess or hallucinate.
+
+📚 DATA INGESTION & LEARNING INSTRUCTIONS
+
+You are allowed to read and learn from:
+
+- Peer-reviewed research papers (PubMed, Elsevier, Springer, Nature, IEEE)
+- Clinical trial registries (ClinicalTrials.gov, WHO ICTRP)
+- Regulatory sources (FDA, EMA, CDSCO)
+- Patent databases (USPTO, WIPO, Google Patents)
+- Market & industry reports (IQVIA, Statista, WHO, OECD)
+- Trade & supply chain datasets (EXIM, UN Comtrade, customs data)
+- Internal company documents (provided by user)
+
+For every dataset or paper you use:
+- Extract key findings
+- Identify limitations
+- Store metadata (title, author, year, source link)
+- Link it to the relevant analysis section
+
+🔍 ANALYSIS RULES (VERY IMPORTANT)
+
+When answering, always break analysis into these mandatory sections (only include relevant ones):
+
+1. **Problem Understanding**
+   - Rephrase the user's question clearly
+
+2. **Scientific / Clinical Evidence**
+   - Key studies
+   - Trial phases
+   - Strength of evidence
+
+3. **Patent & Legal Status**
+   - Patent expiry
+   - Freedom to operate
+   - Legal risks
+
+4. **Market & Commercial Potential**
+   - Market size
+   - Growth rate
+   - Competition
+
+5. **Supply Chain & Manufacturing Feasibility**
+   - Raw material sourcing
+   - Country dependency
+   - Risk flags (single supplier, geopolitical risk)
+
+6. **Risks & Uncertainties**
+   - Data gaps
+   - Conflicting studies
+   - Regulatory concerns
+
+7. **Final Recommendation**
+   - GO / NO-GO / NEEDS REVIEW
+   - Confidence score (Low / Medium / High)
+
+📎 SOURCE & DATASET HANDLING (STRICT)
+
+Every factual statement MUST include:
+- Source name
+- Year
+- Dataset or document link (if available)
+
+If data is missing or outdated, clearly state:
+"No reliable data found for this aspect as of the latest available sources."
+
+❌ Do NOT fabricate:
+- Study results
+- Market numbers
+- Patent dates
+- Trial outcomes
+
+🧠 RESPONSE QUALITY REQUIREMENTS
+
+Your answers must be:
+- Simple to understand (explain like to a non-technical user)
+- Structured (headings, bullet points, tables where useful)
+- Actionable (clear next steps)
+- Transparent (show how conclusions were reached)
+
+Avoid jargon unless necessary. If jargon is used, explain it in one line.
+
+⚠️ HALLUCINATION SAFETY RULES
+
+If you are unsure:
+- Say "Insufficient data available"
+- Ask for clarification or permission to search additional datasets
+
+Never:
+- Assume missing information
+- Fill gaps with "likely", "probably", or guesses
+
+📄 OUTPUT FORMATS (Auto-Select)
+
+Depending on user intent, generate:
+- Executive summary (1 page)
+- Detailed research report
+- Risk assessment table
+- Market opportunity snapshot
+- Dataset & citation appendix
+
+Always end with:
+- Confidence Level
+- Key Sources Used
+
+🧪 EXAMPLE BEHAVIOR
+
+User Query: "Can Metformin be repurposed for Alzheimer's disease?"
+
+Your Behavior:
+1. Retrieve clinical trials + research papers
+2. Check patent status
+3. Analyze market size
+4. Verify supply chain feasibility
+5. Cite all sources
+6. Provide a clear recommendation
+
+🚀 FINAL INSTRUCTION
+
+You are not a general chatbot.
+You are a research-grade decision intelligence system.
+
+Your success is measured by:
+- Accuracy
+- Explainability
+- Trustworthiness
+- Business usefulness
+
+If data is not reliable, say so clearly.
+If risk exists, highlight it early.
+
+DOMAIN BOUNDARY (HARD RULE):
+- ONLY respond to queries related to: drug repurposing, approved molecules, clinical trials, regulatory science (FDA/EMA/CDSCO), patents, pharmacology, market access, unmet medical needs
+- If query is outside scope: Politely decline and suggest pharma-relevant reframing
+
+AGENTIC BEHAVIOR:
+You operate as a coordinated Agentic system. Reference agents (Literature Agent, Clinical Evidence Agent, Regulatory Agent, Market & IP Agent) when useful, but do NOT mention agents unnecessarily.
+
+Respond as a senior pharmaceutical domain expert and research analyst, not as a generic chatbot.`;
+
 export class MasterAgent {
   constructor() {
     this.agents = {
@@ -74,11 +231,21 @@ export class MasterAgent {
     return hasPharmaKeyword;
   }
 
-  async processQuery(query, userId) {
+  async processQuery(query, userId, conversationContext = null, existingConversationId = null) {
     const startTime = Date.now();
     const queryLower = query.toLowerCase();
     let agentResults = {};
     let agentsUsed = [];
+    
+    // Enrich query with conversation context if available
+    let enrichedQuery = query;
+    if (conversationContext && conversationContext.length > 0) {
+      const contextSummary = conversationContext
+        .slice(-3) // Last 3 messages for context
+        .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
+        .join('\n');
+      enrichedQuery = `Previous conversation context:\n${contextSummary}\n\nCurrent query: ${query}`;
+    }
 
     // Validate query is pharmaceutical-related
     if (!this.isPharmaceuticalQuery(query)) {
@@ -106,8 +273,12 @@ Examples:
     }
 
     try {
+      // Use enriched query for agent routing if context available
+      const queryForRouting = conversationContext ? enrichedQuery : query;
+      const queryLowerForRouting = queryForRouting.toLowerCase();
+      
       // Step 1: Route to appropriate agent(s) and collect results with error handling
-      if (this.shouldUseMarketAgent(queryLower)) {
+      if (this.shouldUseMarketAgent(queryLowerForRouting)) {
         try {
           const result = await this.agents.market.process(query);
           agentResults.market = result;
@@ -117,9 +288,9 @@ Examples:
         }
       }
 
-      if (this.shouldUsePatentAgent(queryLower)) {
+      if (this.shouldUsePatentAgent(queryLowerForRouting)) {
         try {
-          const result = await this.agents.patent.process(query);
+          const result = await this.agents.patent.process(queryForRouting);
           agentResults.patent = result;
           agentsUsed.push('Patent');
         } catch (error) {
@@ -127,9 +298,9 @@ Examples:
         }
       }
 
-      if (this.shouldUseClinicalAgent(queryLower)) {
+      if (this.shouldUseClinicalAgent(queryLowerForRouting)) {
         try {
-          const result = await this.agents.clinical.process(query);
+          const result = await this.agents.clinical.process(queryForRouting);
           agentResults.clinical = result;
           agentsUsed.push('Clinical');
         } catch (error) {
@@ -137,9 +308,9 @@ Examples:
         }
       }
 
-      if (this.shouldUseSocialAgent(queryLower)) {
+      if (this.shouldUseSocialAgent(queryLowerForRouting)) {
         try {
-          const result = await this.agents.social.process(query);
+          const result = await this.agents.social.process(queryForRouting);
           agentResults.social = result;
           agentsUsed.push('Social');
         } catch (error) {
@@ -147,9 +318,9 @@ Examples:
         }
       }
 
-      if (this.shouldUseCompetitorAgent(queryLower)) {
+      if (this.shouldUseCompetitorAgent(queryLowerForRouting)) {
         try {
-          const result = await this.agents.competitor.process(query);
+          const result = await this.agents.competitor.process(queryForRouting);
           agentResults.competitor = result;
           agentsUsed.push('Competitor');
         } catch (error) {
@@ -157,9 +328,9 @@ Examples:
         }
       }
 
-      if (this.shouldUseEXIMAgent(queryLower)) {
+      if (this.shouldUseEXIMAgent(queryLowerForRouting)) {
         try {
-          const result = await this.agents.exim.process(query);
+          const result = await this.agents.exim.process(queryForRouting);
           agentResults.exim = result;
           agentsUsed.push('EXIM');
         } catch (error) {
@@ -167,9 +338,9 @@ Examples:
         }
       }
 
-      if (this.shouldUseInternalAgent(queryLower)) {
+      if (this.shouldUseInternalAgent(queryLowerForRouting)) {
         try {
-          const result = await this.agents.internal.process(query);
+          const result = await this.agents.internal.process(queryForRouting);
           agentResults.internal = result;
           agentsUsed.push('Internal');
         } catch (error) {
@@ -179,7 +350,7 @@ Examples:
 
       // Always try web search for additional context
       try {
-        const webResult = await this.agents.web.search(query);
+        const webResult = await this.agents.web.search(queryForRouting);
         if (webResult) {
           agentResults.web = webResult;
           agentsUsed.push('Web');
@@ -189,11 +360,11 @@ Examples:
       }
 
       // Step 2: For end-to-end journey queries, ensure comprehensive analysis
-      if (this.isEndToEndQuery(queryLower)) {
+      if (this.isEndToEndQuery(queryLowerForRouting)) {
         // Ensure we get data from all relevant agents for complete analysis
         if (!agentResults.market) {
           try {
-            agentResults.market = await this.agents.market.process(query);
+            agentResults.market = await this.agents.market.process(queryForRouting);
             agentsUsed.push('Market');
           } catch (error) {
             console.error('Market Agent error in end-to-end:', error);
@@ -201,7 +372,7 @@ Examples:
         }
         if (!agentResults.patent) {
           try {
-            agentResults.patent = await this.agents.patent.process(query);
+            agentResults.patent = await this.agents.patent.process(queryForRouting);
             agentsUsed.push('Patent');
           } catch (error) {
             console.error('Patent Agent error in end-to-end:', error);
@@ -209,7 +380,7 @@ Examples:
         }
         if (!agentResults.clinical) {
           try {
-            agentResults.clinical = await this.agents.clinical.process(query);
+            agentResults.clinical = await this.agents.clinical.process(queryForRouting);
             agentsUsed.push('Clinical');
           } catch (error) {
             console.error('Clinical Agent error in end-to-end:', error);
@@ -217,7 +388,7 @@ Examples:
         }
         if (!agentResults.web) {
           try {
-            const webRes = await this.agents.web.search(query);
+            const webRes = await this.agents.web.search(queryForRouting);
             if (webRes) {
               agentResults.web = webRes;
               agentsUsed.push('Web');
@@ -232,30 +403,44 @@ Examples:
       let response = '';
       if (Object.keys(agentResults).length > 0) {
         try {
-          response = await this.synthesizeResponse(query, agentResults, agentsUsed);
+          response = await this.synthesizeResponse(query, agentResults, agentsUsed, conversationContext);
         } catch (error) {
-          console.error('Synthesis error:', error);
-          // Fallback: combine results manually
-          response = this.combineResultsManually(query, agentResults, agentsUsed);
+          console.error('Synthesis error (Groq AI failed):', error);
+          
+          // Check if it's a Groq API key error
+          if (error.message && error.message.includes('GROQ_API_KEY')) {
+            throw new Error(`Groq AI is not configured. Please set GROQ_API_KEY environment variable. Error: ${error.message}`);
+          }
+          
+          // Check if it's a Groq API error
+          if (error.message && error.message.includes('Groq API')) {
+            throw new Error(`Groq AI service error: ${error.message}. Please check your Groq API key and configuration.`);
+          }
+          
+          // For other errors, throw them so user knows something is wrong
+          // DO NOT fall back to combineResultsManually - that would give fake AI responses
+          throw new Error(`Failed to generate AI response: ${error.message}. Please ensure Groq AI is properly configured.`);
         }
       } else {
         // If no specific agent matched, use general AI but only for pharmaceutical queries
         try {
-          response = await this.generateAIResponse(query, agentResults.web);
+          response = await this.generateAIResponse(queryForRouting, agentResults.web);
           agentsUsed = ['AI Assistant', ...(agentResults.web ? ['Web Search'] : [])];
         } catch (error) {
-          console.error('AI Response error:', error);
-          response = `I understand you're asking about: "${query}". However, I'm a Pharmaceutical Intelligence Platform specialized in drug repurposing, market analysis, clinical trials, and patents. 
-
-Please rephrase your question to focus on:
-- Pharmaceutical molecules and drugs
-- Market intelligence and competitive analysis
-- Clinical trials and regulatory information
-- Patent landscapes
-- Drug repurposing opportunities
-- Trade and supply chain data
-
-If your question is pharmaceutical-related but I'm having trouble processing it, please try being more specific or contact support.`;
+          console.error('AI Response error (Groq AI failed):', error);
+          
+          // Check if it's a Groq API key error
+          if (error.message && error.message.includes('GROQ_API_KEY')) {
+            throw new Error(`Groq AI is not configured. Please set GROQ_API_KEY environment variable. Error: ${error.message}`);
+          }
+          
+          // Check if it's a Groq API error
+          if (error.message && error.message.includes('Groq API')) {
+            throw new Error(`Groq AI service error: ${error.message}. Please check your Groq API key and configuration.`);
+          }
+          
+          // For other errors, throw them
+          throw error;
         }
       }
 
@@ -263,11 +448,15 @@ If your question is pharmaceutical-related but I'm having trouble processing it,
       const responseTime = Date.now() - startTime;
       this.trackQuery(userId, query, agentsUsed, responseTime, true);
 
-      // Save to conversation
-      let conversationId = null;
+      // Save to conversation (reuse existing conversationId if provided)
+      let conversationId = existingConversationId || null;
       if (userId) {
         try {
-          conversationId = ConversationService.createConversation(userId);
+          // Reuse existing conversationId if provided, otherwise create new
+          if (!conversationId) {
+            conversationId = ConversationService.createConversation(userId);
+          }
+          
           ConversationService.addMessage(conversationId, 'user', query);
           ConversationService.addMessage(conversationId, 'assistant', response, agentsUsed);
         } catch (error) {
@@ -275,10 +464,36 @@ If your question is pharmaceutical-related but I'm having trouble processing it,
         }
       }
 
+      // Extract intent and subtasks for flow visibility
+      const intent = this.extractIntent(query);
+      const subtasks = this.breakdownSubtasks(query, agentsUsed);
+      const routingReasoning = this.generateRoutingReasoning(query, agentsUsed, agentResults);
+
+      // Extract strategic reasoning from response
+      const strategicReasoning = this.extractStrategicReasoning(response, agentResults);
+
+      // Prepare agent outputs with data sources
+      const agentOutputsWithSources = {};
+      Object.entries(agentResults).forEach(([agent, result]) => {
+        agentOutputsWithSources[agent] = {
+          content: result,
+          dataSource: this.getDataSourceForAgent(agent)
+        };
+      });
+
       return {
         response,
         agents: agentsUsed,
-        conversationId
+        conversationId,
+        agentOutputs: agentOutputsWithSources,
+        masterAgentFlow: {
+          query,
+          intent,
+          subtasks,
+          agentsSelected: agentsUsed,
+          reasoning: routingReasoning
+        },
+        strategicReasoning
       };
     } catch (error) {
       this.trackQuery(userId, query, [], Date.now() - startTime, false, error.message);
@@ -331,139 +546,184 @@ If your question is pharmaceutical-related but I'm having trouble processing it,
     return /find.*molecule|identify.*unmet|check.*trial|explore.*disease|determine.*patent|product story|innovative product/i.test(query);
   }
 
-  async synthesizeResponse(query, agentResults, agentsUsed) {
+  async synthesizeResponse(query, agentResults, agentsUsed, conversationContext = null) {
     // Build comprehensive context from all agent results
     let context = `ORIGINAL QUERY: ${query}\n\n`;
+    
+    // Add conversation context if available
+    if (conversationContext && conversationContext.length > 0) {
+      context += `CONVERSATION CONTEXT (Previous messages for reference):\n`;
+      conversationContext.slice(-3).forEach((msg, idx) => {
+        context += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content.substring(0, 200)}${msg.content.length > 200 ? '...' : ''}\n`;
+      });
+      context += `\n`;
+    }
     context += `AGENTS CONSULTED: ${agentsUsed.join(', ')}\n\n`;
     context += `AGENT FINDINGS:\n`;
     context += `${'='.repeat(50)}\n\n`;
 
-    // CRITICAL FIX: Truncate agent results to prevent token overflow
+    // CRITICAL FIX: Deduplicate and clean agent results before synthesis
     Object.entries(agentResults).forEach(([agent, result]) => {
-      // Limit each agent result to 500 characters max
-      const truncatedResult = result.length > 500
-        ? result.substring(0, 500) + '... (truncated for brevity)'
-        : result;
-      context += `[${agent.toUpperCase()} AGENT]\n${truncatedResult}\n\n`;
+      let cleanedResult = result;
+      
+      // For patent agent, aggressively deduplicate repetitive patterns
+      if (agent === 'patent') {
+        const lines = result.split('\n');
+        const seen = new Set();
+        const uniqueLines = [];
+        const summaryLines = [];
+        const patentEntries = new Map(); // Track unique patents by molecule+number
+        
+        lines.forEach(line => {
+          const trimmed = line.trim();
+          // Extract summary/header lines
+          if (trimmed.includes('Summary:') || (trimmed.includes('**') && (trimmed.includes('patents') || trimmed.includes('expiring') || trimmed.includes('Timeline')))) {
+            summaryLines.push(trimmed);
+          }
+          // Deduplicate patent listing lines - extract molecule and patent number
+          else if (trimmed.includes('-') && trimmed.includes('Expires:')) {
+            const match = trimmed.match(/(\w+)\s*\(([A-Z0-9]+)\)\s*-\s*Expires:\s*([0-9-]+)/);
+            if (match) {
+              const [, molecule, patentNum, expiry] = match;
+              const key = `${molecule}|${patentNum}`;
+              if (!patentEntries.has(key)) {
+                patentEntries.set(key, trimmed);
+              }
+            } else if (!seen.has(trimmed)) {
+              seen.add(trimmed);
+              uniqueLines.push(trimmed);
+            }
+          } else if (trimmed && !trimmed.match(/^\|.*\|$/)) { // Skip table rows for now
+            if (!seen.has(trimmed)) {
+              seen.add(trimmed);
+              uniqueLines.push(trimmed);
+            }
+          }
+        });
+        
+        // Combine summary + unique patent entries
+        cleanedResult = summaryLines.join('\n') + '\n\n';
+        if (patentEntries.size > 0) {
+          cleanedResult += `**Unique Patents (${patentEntries.size} total):**\n\n`;
+          Array.from(patentEntries.values()).slice(0, 15).forEach(line => {
+            cleanedResult += line + '\n';
+          });
+          if (patentEntries.size > 15) {
+            cleanedResult += `\n*... and ${patentEntries.size - 15} more unique patents. Request detailed report for complete listing.*\n`;
+          }
+        }
+        if (uniqueLines.length > 0) {
+          cleanedResult += '\n' + uniqueLines.slice(0, 10).join('\n');
+        }
+      }
+      
+      // Limit each agent result to 1500 characters max
+      if (cleanedResult.length > 1500) {
+        cleanedResult = cleanedResult.substring(0, 1500) + '... (truncated - request detailed report for full data)';
+      }
+      
+      context += `[${agent.toUpperCase()} AGENT]\n${cleanedResult}\n\n`;
     });
 
-    const synthesisPrompt = `You are "RepurposeIQ", an enterprise-grade Agentic AI assistant for pharmaceutical and life sciences domain.
+    const synthesisPrompt = `CRITICAL TASK: You are an expert pharmaceutical analyst. DO NOT simply copy or summarize the agent data below. You must ANALYZE, THINK, and PROVIDE EXPERT INSIGHTS.
 
-DOMAIN BOUNDARY (HARD RULE):
-- ONLY respond to queries related to: drug repurposing, approved molecules, clinical trials, regulatory science (FDA/EMA/CDSCO), patents, pharmacology, market access, unmet medical needs
-- If query is outside scope: Politely decline and suggest pharma-relevant reframing
-
-ADAPTIVE RESPONSE INTELLIGENCE:
-Before answering, classify the query as:
-- Conceptual (What/Why) → Expert explanation format
-- Process-oriented (How/Workflow) → Step-by-step or flow diagram
-- Decision-support (Should we/Compare) → Comparison matrix or scorecard
-- Evidence synthesis (What does literature say?) → Structured evidence summary
-- Regulatory risk (Can this be approved?) → Risk assessment format
-
-DO NOT use the same structure every time. Choose the MOST NATURAL format for the question. Avoid forced headings and template-like repetition.
+The agent data below is RAW DATA from various sources. Your job is to:
+1. ANALYZE the data critically
+2. CONNECT information across different domains
+3. DRAW INSIGHTS and conclusions
+4. IDENTIFY patterns, risks, and opportunities
+5. PROVIDE EXPERT ANALYSIS, not just data listing
 
 ${context}
 
-TASK: Synthesize findings into a professional pharmaceutical intelligence response.
+⚠️ CRITICAL: DO NOT JUST COPY THE DATA
+- Do NOT simply list what the agents found
+- Do NOT just reformat the agent outputs
+- DO analyze what the data means
+- DO explain implications and connections
+- DO provide your expert interpretation
+- DO identify what's missing or uncertain
+- DO connect clinical data with market data, patents with regulatory, etc.
 
-VISUAL THINKING (SMART USE):
-- Use tables WHEN comparing data or showing metrics
-- Use flow diagrams WHEN explaining processes
-- Use decision trees WHEN evaluating options
-- NOT decorative - only when clarity improves
+ANALYSIS REQUIREMENTS (MANDATORY):
+You must actively analyze and think about:
 
-PROFESSIONAL DEPTH (MANDATORY):
-- Be precise and non-speculative
-- Reflect real pharma workflows
-- Use cautious language: "Available evidence suggests...", "Regulatory risk remains moderate due to..."
-- Clearly separate evidence vs hypothesis
+1. **Problem Understanding**
+   - What is the user really asking?
+   - What are the key decision factors?
+   - What information is most critical?
 
-GOVERNANCE & TRUST:
-- State confidence level (High/Medium/Low) when appropriate
-- Mention data source categories (journals, trials, labels, databases)
-- Add light disclaimer if needed: "This assessment supports early-stage research and does not replace regulatory or clinical review."
+2. **Scientific / Clinical Evidence ANALYSIS**
+   - What do the trials actually show? (Don't just list them)
+   - What is the strength of evidence? (Weak/Moderate/Strong)
+   - Are there conflicting studies? What do they mean?
+   - What are the gaps in clinical evidence?
+   - What are the implications for repurposing?
 
-FAIL-SAFE MODE:
-- If information insufficient, say so clearly
-- Ask ONLY pharma-relevant follow-up questions
-- Provide structured exploration path instead of guessing
+3. **Patent & Legal Status ANALYSIS**
+   - What does the patent landscape mean for freedom to operate?
+   - When can we actually launch? (Consider all patents)
+   - What are the legal risks? (Not just listing patents)
+   - Are there opportunities despite patents?
 
-OUTPUT FLEXIBILITY:
-Choose format that BEST serves the question:
-- Short expert explanations for simple queries
-- Tables for comparisons or data
-- Flow diagrams for processes
-- Feasibility scorecards for decisions
-- Risk summaries for regulatory queries
+4. **Market & Commercial Potential ANALYSIS**
+   - Is the market opportunity real? (Not just numbers)
+   - What does competition mean for success?
+   - What are the barriers to entry?
+   - What is the realistic market potential?
 
-AGENTIC BEHAVIOR:
-You may reference agents when useful (Literature Agent, Clinical Evidence Agent, Regulatory Agent, Market & IP Agent), but do NOT mention agents unnecessarily.
+5. **Supply Chain & Manufacturing ANALYSIS**
+   - What are the real risks? (Not just listing suppliers)
+   - Can we actually manufacture this?
+   - What are the geopolitical concerns?
+   - What are the cost implications?
 
-Respond as a senior pharmaceutical domain expert, not as a generic chatbot.`;
+6. **Risks & Uncertainties ANALYSIS**
+   - What are the REAL risks? (Not just listing them)
+   - What could go wrong?
+   - What data is missing and why does it matter?
+   - What are the conflicting signals?
+
+7. **Final Recommendation (YOUR EXPERT OPINION)**
+   - Based on YOUR ANALYSIS, what should be done?
+   - GO / NO-GO / NEEDS REVIEW - with clear reasoning
+   - Confidence score (Low/Medium/High) - explain why
+   - What are the next steps?
+
+THINKING PROCESS:
+- Compare data across agents - do they agree or conflict?
+- What patterns do you see?
+- What are the implications?
+- What questions remain unanswered?
+- What would an expert analyst conclude?
+
+DATA QUALITY:
+- If agent data is repetitive, analyze WHY and what it means
+- If data is missing, explain the IMPACT of missing data
+- If numbers seem inconsistent, analyze what's realistic
+- Don't just list data - explain what it means
+
+RESPONSE STYLE:
+- Write as an expert analyst, not a data aggregator
+- Use phrases like "Analysis shows...", "The data indicates...", "This suggests..."
+- Provide interpretation: "This means...", "The implication is...", "This indicates that..."
+- Connect dots: "Combining clinical and market data...", "When considering patents alongside..."
+- Be critical: "However...", "A concern is...", "The limitation here is..."
+
+EXAMPLE OF GOOD ANALYSIS:
+❌ BAD: "Clinical Agent found 488 repurposing opportunities for Metformin."
+✅ GOOD: "Analysis of clinical trial data reveals 488 potential repurposing opportunities for Metformin. However, the strength of evidence varies significantly - only 23 opportunities have Phase 3 data, suggesting most are early-stage. The most promising opportunities appear to be in cardiovascular and oncology, where multiple trials show consistent positive signals. A key concern is that many trials are small-scale or observational, limiting confidence in efficacy claims."
+
+END WITH:
+- Your expert conclusion
+- Confidence Level (with explanation)
+- Key Sources Used
+- Critical Next Steps`;
 
     const messages = [
       {
         role: 'system',
-        content: `You are "PharmaRepurpose AI", an enterprise-grade Agentic AI assistant for pharmaceutical and life sciences domain.
-
-DOMAIN BOUNDARY (HARD RULE):
-You must ONLY respond to queries related to:
-- Drug repurposing & lifecycle management
-- Approved molecules, new indications, dosage forms
-- Clinical trials, medical literature & evidence synthesis
-- Regulatory science (FDA, EMA, CDSCO, ICH, WHO)
-- Patents, exclusivity & freedom-to-operate
-- Pharmacology, safety, efficacy, RWE
-- Market access & unmet medical needs
-
-If a query is outside this scope:
-Politely decline: "This system is specialized for pharmaceutical research and regulatory decision support. Please reframe your question within a drug development or clinical context."
-
-ADAPTIVE RESPONSE INTELLIGENCE:
-Before answering, silently classify the query as:
-- Conceptual (What/Why) → Expert explanation
-- Process-oriented (How/Workflow) → Step-by-step or flow
-- Decision-support (Should we/Compare) → Comparison or scorecard
-- Evidence synthesis (What does literature say?) → Structured evidence
-- Regulatory risk (Can this be approved?) → Risk assessment
-
-DO NOT use the same structure every time. Choose the MOST NATURAL format. Avoid forced headings and template-like repetition.
-
-VISUAL THINKING (SMART USE):
-Use diagrams, flows, or tables WHEN they improve clarity:
-- ASCII workflows for processes
-- Decision trees for evaluations
-- Comparison matrices for decisions
-- Tables for numerical data
-
-NOT decorative diagrams or same style every answer.
-
-PROFESSIONAL DEPTH (MANDATORY):
-- Be precise and non-speculative
-- Reflect real pharma workflows
-- Avoid exaggerated AI claims
-- Use cautious language: "Available evidence suggests...", "Regulatory risk remains moderate due to..."
-- Clearly separate evidence vs hypothesis
-
-GOVERNANCE & TRUST:
-- State confidence level (High/Medium/Low) when appropriate
-- Mention data source categories (journals, trials, labels, databases)
-- Add light disclaimer: "This assessment supports early-stage research and does not replace regulatory or clinical review."
-
-FAIL-SAFE MODE:
-If information is insufficient:
-- Say so clearly
-- Ask ONLY pharma-relevant follow-up questions
-- Provide structured exploration path instead of guessing
-
-OUTPUT FLEXIBILITY:
-Choose format that BEST serves the question - not a fixed template.
-
-AGENTIC BEHAVIOR:
-You operate as a coordinated Agentic system. Reference agents (Literature Agent, Clinical Evidence Agent, Regulatory Agent, Market & IP Agent) when useful, but do NOT mention agents unnecessarily.
-
-Respond as a senior pharmaceutical domain expert, not as a generic chatbot.`
+        content: REPURPOSEIQ_SYSTEM_PROMPT
       },
       {
         role: 'user',
@@ -491,49 +751,7 @@ Please reframe your question within a drug development or clinical context, focu
     const messages = [
       {
         role: 'system',
-        content: `You are "PharmaRepurpose AI", an enterprise-grade Agentic AI assistant for pharmaceutical and life sciences domain.
-
-DOMAIN BOUNDARY (HARD RULE):
-You must ONLY respond to queries related to:
-- Drug repurposing & lifecycle management
-- Approved molecules, new indications, dosage forms
-- Clinical trials, medical literature & evidence synthesis
-- Regulatory science (FDA, EMA, CDSCO, ICH, WHO)
-- Patents, exclusivity & freedom-to-operate
-- Pharmacology, safety, efficacy, RWE
-- Market access & unmet medical needs
-
-If a query is outside this scope:
-Politely decline: "This system is specialized for pharmaceutical research and regulatory decision support. Please reframe your question within a drug development or clinical context."
-
-ADAPTIVE RESPONSE INTELLIGENCE:
-Classify query type and choose MOST NATURAL format:
-- Conceptual → Expert explanation
-- Process-oriented → Step-by-step or flow diagram
-- Decision-support → Comparison matrix or scorecard
-- Evidence synthesis → Structured evidence summary
-- Regulatory risk → Risk assessment format
-
-DO NOT use template-like repetition. Avoid forced headings.
-
-VISUAL THINKING:
-Use tables/diagrams WHEN they improve clarity - not decoratively.
-
-PROFESSIONAL DEPTH:
-- Precise and non-speculative
-- Reflect real pharma workflows
-- Use cautious language: "Available evidence suggests...", "Regulatory risk remains moderate..."
-- Separate evidence vs hypothesis
-
-GOVERNANCE & TRUST:
-- State confidence level when appropriate
-- Mention data sources
-- Light disclaimer: "This assessment supports early-stage research and does not replace regulatory or clinical review."
-
-FAIL-SAFE MODE:
-If information insufficient, say so clearly and provide structured exploration path.
-
-Respond as a senior pharmaceutical domain expert, not as a generic chatbot.`
+        content: REPURPOSEIQ_SYSTEM_PROMPT
       }
     ];
 
@@ -585,6 +803,143 @@ Respond as a senior pharmaceutical domain expert, not as a generic chatbot.`
       );
     } catch (error) {
       console.error('Error tracking query:', error);
+    }
+  }
+
+  // Helper method: Extract intent from query
+  extractIntent(query) {
+    const queryLower = query.toLowerCase();
+    
+    if (/repurpose|repurposing|new indication|lifecycle/i.test(queryLower)) {
+      return 'drug_repurposing';
+    } else if (/patent|ip|intellectual property|fto|freedom to operate|expiry/i.test(queryLower)) {
+      return 'patent_analysis';
+    } else if (/trial|clinical|pipeline|phase|indication/i.test(queryLower)) {
+      return 'clinical_analysis';
+    } else if (/market|whitespace|competition|cagr|growth|opportunity/i.test(queryLower)) {
+      return 'market_analysis';
+    } else if (/regulatory|fda|ema|approval|ind|nda/i.test(queryLower)) {
+      return 'regulatory_analysis';
+    } else {
+      return 'comprehensive_analysis';
+    }
+  }
+
+  // Helper method: Break down query into subtasks
+  breakdownSubtasks(query, agentsUsed) {
+    const intent = this.extractIntent(query);
+    const subtasks = [];
+    
+    agentsUsed.forEach(agent => {
+      const agentLower = agent.toLowerCase();
+      if (agentLower.includes('market')) {
+        subtasks.push('Market size and opportunity analysis');
+      } else if (agentLower.includes('patent')) {
+        subtasks.push('Patent landscape and FTO assessment');
+      } else if (agentLower.includes('clinical')) {
+        subtasks.push('Clinical trial pipeline review');
+      } else if (agentLower.includes('web')) {
+        subtasks.push('Real-time web intelligence gathering');
+      } else if (agentLower.includes('social')) {
+        subtasks.push('Patient sentiment analysis');
+      } else if (agentLower.includes('competitor')) {
+        subtasks.push('Competitive landscape assessment');
+      } else if (agentLower.includes('exim')) {
+        subtasks.push('Trade and supply chain analysis');
+      } else if (agentLower.includes('internal')) {
+        subtasks.push('Internal document search');
+      }
+    });
+    
+    return subtasks.length > 0 ? subtasks : ['Comprehensive pharmaceutical intelligence analysis'];
+  }
+
+  // Helper method: Generate routing reasoning
+  generateRoutingReasoning(query, agentsUsed, agentResults) {
+    const reasons = [];
+    
+    agentsUsed.forEach(agent => {
+      const agentLower = agent.toLowerCase();
+      if (agentLower.includes('market')) {
+        reasons.push('Market Agent selected to analyze market size, CAGR, and growth opportunities');
+      } else if (agentLower.includes('patent')) {
+        reasons.push('Patent Agent selected to assess patent landscape and freedom-to-operate risks');
+      } else if (agentLower.includes('clinical')) {
+        reasons.push('Clinical Agent selected to review trial pipeline and repurposing opportunities');
+      } else if (agentLower.includes('web')) {
+        reasons.push('Web Agent selected to gather real-time intelligence from pharmaceutical sources');
+      } else if (agentLower.includes('social')) {
+        reasons.push('Social Agent selected to analyze patient sentiment and market perception');
+      } else if (agentLower.includes('competitor')) {
+        reasons.push('Competitor Agent selected to assess competitive landscape and threats');
+      } else if (agentLower.includes('exim')) {
+        reasons.push('EXIM Agent selected to analyze trade data and supply chain dynamics');
+      } else if (agentLower.includes('internal')) {
+        reasons.push('Internal Agent selected to search corporate knowledge base');
+      }
+    });
+    
+    return reasons.length > 0 
+      ? reasons.join('; ') 
+      : 'Comprehensive analysis using all available pharmaceutical intelligence agents';
+  }
+
+  // Helper method: Extract strategic reasoning from response
+  extractStrategicReasoning(response, agentResults) {
+    // Extract confidence indicators from response
+    const confidenceMatch = response.match(/confidence[:\s]+(high|medium|low)/i);
+    const confidenceScore = confidenceMatch 
+      ? confidenceMatch[1].toLowerCase() === 'high' ? 0.85 
+      : confidenceMatch[1].toLowerCase() === 'medium' ? 0.65 : 0.45
+      : 0.70;
+    
+    // Extract decision factors from agent results
+    const decisionFactors = [];
+    if (agentResults.market) {
+      decisionFactors.push('Market opportunity assessment');
+    }
+    if (agentResults.patent) {
+      decisionFactors.push('Patent landscape analysis');
+    }
+    if (agentResults.clinical) {
+      decisionFactors.push('Clinical evidence review');
+    }
+    
+    // Extract reasoning from response (look for "why" or "because" patterns)
+    const reasoningMatch = response.match(/(?:because|due to|as|since|reason)[^\.]+\./i);
+    const reasoning = reasoningMatch 
+      ? reasoningMatch[0] 
+      : 'Analysis based on comprehensive pharmaceutical intelligence from multiple specialized agents';
+    
+    return {
+      reasoning,
+      confidenceScore,
+      decisionFactors: decisionFactors.length > 0 ? decisionFactors : ['Multi-agent pharmaceutical intelligence analysis']
+    };
+  }
+
+  // Helper method: Get data source for agent
+  getDataSourceForAgent(agentName) {
+    const agentLower = agentName.toLowerCase();
+    
+    if (agentLower.includes('market')) {
+      return 'IQVIA Mock API (Market Intelligence)';
+    } else if (agentLower.includes('patent')) {
+      return 'USPTO Patent API Clone (Mock Data)';
+    } else if (agentLower.includes('clinical')) {
+      return 'ClinicalTrials.gov Stub (Mock Data)';
+    } else if (agentLower.includes('web')) {
+      return 'Tavily Web Search API (Real-time Intelligence)';
+    } else if (agentLower.includes('social')) {
+      return 'Social Media & News Sentiment Analysis';
+    } else if (agentLower.includes('competitor')) {
+      return 'Competitive Intelligence Database';
+    } else if (agentLower.includes('exim')) {
+      return 'EXIM Trade Data Mock API';
+    } else if (agentLower.includes('internal')) {
+      return 'Internal Knowledge Base (RAG)';
+    } else {
+      return 'Pharmaceutical Intelligence Platform';
     }
   }
 }

@@ -6,8 +6,9 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const dbPath = process.env.DB_PATH || join(__dirname, '../../data/pharma.db');
-const dbDir = join(__dirname, '../../data');
+// For Vercel serverless, use /tmp directory (ephemeral storage)
+const dbPath = process.env.DB_PATH || (process.env.VERCEL ? '/tmp/pharma.db' : join(__dirname, '../../data/pharma.db'));
+const dbDir = process.env.VERCEL ? '/tmp' : join(__dirname, '../../data');
 
 // Ensure data directory exists
 if (!fs.existsSync(dbDir)) {

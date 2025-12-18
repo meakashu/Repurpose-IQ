@@ -42,7 +42,7 @@ export default function SentimentDashboard({ molecule }) {
   const loadSentiment = async () => {
     setLoading(true);
     try {
-      const response = await api.post('/api/sentiment/analyze', {
+      const response = await api.post('/sentiment/analyze', {
         molecule,
         sources: ['news', 'social']
       });

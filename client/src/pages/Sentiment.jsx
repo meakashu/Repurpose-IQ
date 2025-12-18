@@ -1,9 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SentimentDashboard from '../components/SentimentDashboard';
 import { FaSmile, FaChartLine } from 'react-icons/fa';
+import api from '../utils/api';
 
 export default function Sentiment() {
   const [selectedMolecule, setSelectedMolecule] = useState('Metformin');
+  const [molecules, setMolecules] = useState(['Metformin', 'Pembrolizumab', 'Sitagliptin', 'Rivaroxaban', 'Atorvastatin']);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchMolecules();
+  }, []);
+
+  const fetchMolecules = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/dashboard/data');
+      const uniqueMolecules = [...new Set(response.data.marketData.map(d => d.molecule))];
+      if (uniqueMolecules.length > 0) {
+        setMolecules(uniqueMolecules.filter(Boolean));
+        // Set first molecule as default if current selection not in list
+        if (!uniqueMolecules.includes(selectedMolecule)) {
+          setSelectedMolecule(uniqueMolecules[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load molecules:', error);
+      // Keep default hardcoded list on error
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen p-6">
@@ -27,13 +54,14 @@ export default function Sentiment() {
           <select
             value={selectedMolecule}
             onChange={(e) => setSelectedMolecule(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={loading}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
-            <option value="Metformin">Metformin</option>
-            <option value="Pembrolizumab">Pembrolizumab</option>
-            <option value="Sitagliptin">Sitagliptin</option>
-            <option value="Rivaroxaban">Rivaroxaban</option>
-            <option value="Atorvastatin">Atorvastatin</option>
+            {molecules.map((mol) => (
+              <option key={mol} value={mol}>
+                {mol}
+              </option>
+            ))}
           </select>
         </div>
 

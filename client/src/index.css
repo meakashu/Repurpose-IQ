@@ -415,6 +415,8 @@
   border: 2px solid var(--theme-black);
   background: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .message-user {
@@ -425,6 +427,27 @@
 .message-assistant {
   background: #FFFEF5; /* Very light yellow tint */
   border-color: var(--theme-black);
+}
+
+/* Chat container improvements */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0; /* Critical for flex children to shrink */
+}
+
+.chat-messages-container {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0; /* Critical for scrolling to work */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  scroll-behavior: smooth;
+}
+
+.chat-input-container {
+  flex: 0 0 auto; /* Don't grow or shrink */
 }
 
 /* Medical Scrollbar */

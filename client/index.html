@@ -10,6 +10,40 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&family=Roboto:wght@300;400;500;700&family=Montserrat:wght@400;500;600;700;800&family=Raleway:wght@400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&family=Lora:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- 3Dmol.js Library for Molecular Visualization -->
+    <script>
+      // Load 3Dmol.js with fallback
+      function load3Dmol() {
+        const script = document.createElement('script');
+        script.src = 'https://3dmol.org/build/3Dmol-min.js';
+        script.async = true;
+        script.onload = function() {
+          console.log('3Dmol.js loaded successfully');
+          if (window.$3Dmol) {
+            console.log('window.$3Dmol is available');
+          } else {
+            console.warn('window.$3Dmol is not available after script load');
+          }
+        };
+        script.onerror = function() {
+          console.error('Failed to load 3Dmol.js from primary CDN, trying fallback...');
+          // Fallback to alternative CDN
+          const fallbackScript = document.createElement('script');
+          fallbackScript.src = 'https://cdn.jsdelivr.net/npm/3dmol@2.5.3/build/3Dmol-min.js';
+          fallbackScript.async = true;
+          fallbackScript.onload = function() {
+            console.log('3Dmol.js loaded from fallback CDN');
+          };
+          fallbackScript.onerror = function() {
+            console.error('Failed to load 3Dmol.js from all CDNs');
+          };
+          document.head.appendChild(fallbackScript);
+        };
+        document.head.appendChild(script);
+      }
+      load3Dmol();
+    </script>
   </head>
   <body>
     <div id="root"></div>

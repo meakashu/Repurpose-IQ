@@ -26,7 +26,7 @@
     "all": "^0.0.0",
     "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^9.2.2",
+    "better-sqlite3": "^12.5.0",
     "chromadb": "^1.8.1",
     "compression": "^1.7.4",
     "cors": "^2.8.5",

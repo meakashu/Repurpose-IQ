@@ -9,6 +9,13 @@ import {
 import MultiModalInput from '../components/MultiModalInput';
 import TypingIndicator from '../components/TypingIndicator';
 import QuerySuggestions from '../components/QuerySuggestions';
+import AgentOutputDisplay from '../components/AgentOutputDisplay';
+import DemoModeBanner from '../components/DemoModeBanner';
+import StrategicReasoning from '../components/StrategicReasoning';
+import MasterAgentDecisionFlow from '../components/MasterAgentDecisionFlow';
+import { AutoChartRenderer } from '../components/ChartVisualizations';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function Chat() {
   const [messages, setMessages] = useState([]);
@@ -21,6 +28,9 @@ export default function Chat() {
   const [isListening, setIsListening] = useState(false);
   const [syntheticQueries, setSyntheticQueries] = useState([]);
   const [showMultiModal, setShowMultiModal] = useState(false);
+  const [agentOutputs, setAgentOutputs] = useState({});
+  const [masterAgentFlow, setMasterAgentFlow] = useState(null);
+  const [strategicReasoning, setStrategicReasoning] = useState(null);
 
   // ENTERPRISE AI EXECUTION CONTROLS
   const [executionStatus, setExecutionStatus] = useState('idle'); // idle | running | paused | stopped
@@ -31,9 +41,28 @@ export default function Chat() {
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const recognitionRef = useRef(null);
+  const agentIntervalRef = useRef(null);
+  const streamIntervalRef = useRef(null);
+  const abortControllerRef = useRef(null);
+  const isStoppedRef = useRef(false);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Use requestAnimationFrame to ensure DOM is updated
+    requestAnimationFrame(() => {
+      if (messagesEndRef.current) {
+        // Find the scrollable parent (messages container)
+        const scrollContainer = messagesEndRef.current.closest('.overflow-y-auto');
+        if (scrollContainer) {
+          scrollContainer.scrollTo({
+            top: scrollContainer.scrollHeight,
+            behavior: 'smooth'
+          });
+        } else {
+          // Fallback to scrollIntoView
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+      }
+    });
   };
 
   useEffect(() => {
@@ -131,16 +160,47 @@ export default function Chat() {
   };
 
   const stopGeneration = () => {
+    // Mark as stopped
+    isStoppedRef.current = true;
+    
+    // Cancel ongoing API request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    
+    // Clear agent simulation interval
+    if (agentIntervalRef.current) {
+      clearInterval(agentIntervalRef.current);
+      agentIntervalRef.current = null;
+    }
+    
+    // Clear streaming interval
+    if (streamIntervalRef.current) {
+      clearInterval(streamIntervalRef.current);
+      streamIntervalRef.current = null;
+    }
+    
+    // Update state
     setLoading(false);
-    setStreamingText('');
-    if (messages[messages.length - 1]?.role === 'user' && streamingText) {
+    setExecutionStatus('stopped');
+    setCurrentAgent(null);
+    setProgress(0);
+    
+    // Save partial response if there's streaming text
+    const currentStreamingText = streamingText;
+    if (currentStreamingText && currentStreamingText.trim()) {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: streamingText + ' ...(stopped)',
+        content: currentStreamingText + '\n\n*(Generation stopped by user)*',
         agents: []
       }]);
-      setStreamingText('');
     }
+    
+    setStreamingText('');
+    setAgentOutputs({});
+    setMasterAgentFlow(null);
+    setStrategicReasoning(null);
     toast.success('Generation stopped');
   };
 
@@ -154,6 +214,7 @@ export default function Chat() {
     setInput('');
     setLoading(true);
     setStreamingText('');
+    isStoppedRef.current = false; // Reset stopped flag
 
     // ENTERPRISE: Agent orchestration simulation
     setExecutionStatus('running');
@@ -161,49 +222,147 @@ export default function Chat() {
     const agents = ['IQVIA Insights Agent', 'Clinical Trials Agent', 'Patent Landscape Agent', 'Web Intelligence Agent'];
     let agentIndex = 0;
 
-    const agentInterval = setInterval(() => {
+    // Clear any existing interval
+    if (agentIntervalRef.current) {
+      clearInterval(agentIntervalRef.current);
+    }
+
+    agentIntervalRef.current = setInterval(() => {
+      // Check if stopped
+      if (isStoppedRef.current) {
+        if (agentIntervalRef.current) {
+          clearInterval(agentIntervalRef.current);
+          agentIntervalRef.current = null;
+        }
+        return;
+      }
+      
       if (agentIndex < agents.length && loading) {
         setCurrentAgent(agents[agentIndex]);
         setProgress(((agentIndex + 1) / agents.length) * 100);
         agentIndex++;
       } else {
-        clearInterval(agentInterval);
+        if (agentIntervalRef.current) {
+          clearInterval(agentIntervalRef.current);
+          agentIntervalRef.current = null;
+        }
       }
     }, 800);
 
     // Auto scroll to bottom
     setTimeout(() => scrollToBottom(), 100);
 
+    // Create AbortController for cancellable request
+    abortControllerRef.current = new AbortController();
+
     try {
-      const response = await api.post('/query', { query: currentInput, conversationId });
+      const response = await api.post('/query', 
+        { query: currentInput, conversationId },
+        {
+          signal: abortControllerRef.current.signal,
+          timeout: 120000 // 120 seconds timeout for AI queries (Groq can take time)
+        }
+      );
+      
+      // Store agent outputs and flow information if available
+      if (response.data.agentOutputs) {
+        setAgentOutputs(response.data.agentOutputs);
+      }
+      if (response.data.masterAgentFlow) {
+        setMasterAgentFlow(response.data.masterAgentFlow);
+      }
+      if (response.data.strategicReasoning) {
+        setStrategicReasoning(response.data.strategicReasoning);
+      }
 
       // Simulate streaming effect
-      const responseText = response.data.response;
+      const responseText = response.data.response || '';
+
+      // If for some reason the backend didn't return a response string,
+      // fail gracefully and show a helpful message instead of hanging UI
+      if (!responseText.trim()) {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: 'I was not able to generate a response for this query. Please try rephrasing or asking a slightly different pharmaceutical question.',
+          agents: response.data.agents || []
+        }]);
+        setLoading(false);
+        setStreamingText('');
+        setTimeout(() => scrollToBottom(), 100);
+        return;
+      }
+
+      // Clear any existing streaming interval
+      if (streamIntervalRef.current) {
+        clearInterval(streamIntervalRef.current);
+        streamIntervalRef.current = null;
+      }
+
       let index = 0;
-      const streamInterval = setInterval(() => {
-        if (index < responseText.length && loading) {
+      let lastScrollTime = 0;
+      
+      streamIntervalRef.current = setInterval(() => {
+        // Check if stopped (using ref to avoid stale state)
+        if (isStoppedRef.current) {
+          if (streamIntervalRef.current) {
+            clearInterval(streamIntervalRef.current);
+            streamIntervalRef.current = null;
+          }
+          return;
+        }
+
+        if (index < responseText.length) {
           setStreamingText(responseText.substring(0, index + 1));
           index += 2;
-          scrollToBottom();
-        } else {
-          clearInterval(streamInterval);
-          if (loading) {
-            setMessages(prev => [...prev, {
-              role: 'assistant',
-              content: responseText,
-              agents: response.data.agents
-            }]);
-            setStreamingText('');
-            setTimeout(() => scrollToBottom(), 100);
+          // Throttle scroll calls to every 100ms during streaming for better performance
+          const now = Date.now();
+          if (now - lastScrollTime > 100) {
+            scrollToBottom();
+            lastScrollTime = now;
           }
+        } else {
+          if (streamIntervalRef.current) {
+            clearInterval(streamIntervalRef.current);
+            streamIntervalRef.current = null;
+          }
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: responseText,
+            agents: response.data.agents,
+            strategicReasoning: response.data.strategicReasoning
+          }]);
+          setStreamingText('');
+          setLoading(false);
+          setExecutionStatus('idle');
+          setTimeout(() => scrollToBottom(), 100);
         }
       }, 20);
 
-      if (response.data.conversationId && !conversationId) {
+      // Update conversation ID if returned (new or existing)
+      if (response.data.conversationId) {
         setConversationId(response.data.conversationId);
-        loadConversations();
+        if (!conversationId) {
+          // Only reload if this is a new conversation
+          loadConversations();
+        }
       }
     } catch (error) {
+      // Don't show error if request was aborted (user stopped)
+      if (error.name === 'AbortError' || error.name === 'CanceledError') {
+        // Already handled in stopGeneration
+        return;
+      }
+
+      // Clear intervals on error
+      if (agentIntervalRef.current) {
+        clearInterval(agentIntervalRef.current);
+        agentIntervalRef.current = null;
+      }
+      if (streamIntervalRef.current) {
+        clearInterval(streamIntervalRef.current);
+        streamIntervalRef.current = null;
+      }
+
       toast.error(error.response?.data?.error || 'Failed to get response');
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -211,9 +370,10 @@ export default function Chat() {
         agents: []
       }]);
       setTimeout(() => scrollToBottom(), 100);
-    } finally {
       setLoading(false);
       setStreamingText('');
+      setExecutionStatus('idle');
+      abortControllerRef.current = null;
     }
   };
 
@@ -245,22 +405,31 @@ export default function Chat() {
       const lastResponse = messages[messages.length - 1];
       const userQuery = messages[messages.length - 2]?.content || 'Chat conversation';
 
+      // Include agent outputs and strategic reasoning in report
       const payload = format === 'PDF' ? {
         title: 'RepurposeIQ Analysis Report',
         query: userQuery,
         content: lastResponse.content,
         metadata: {
           agents_used: lastResponse.agents || [],
-          user: 'current_user'
-        }
+          confidence_score: lastResponse.strategicReasoning?.confidenceScore || null,
+          decision_factors: lastResponse.strategicReasoning?.decisionFactors || [],
+          master_agent_flow: lastResponse.masterAgentFlow || null,
+          user: 'current_user',
+          response_time: Date.now() - (lastResponse.timestamp || Date.now())
+        },
+        agent_outputs: agentOutputs || {}
       } : {
         title: 'RepurposeIQ Analysis Report',
         query: userQuery,
         data: {
-          findings: lastResponse.content.split('\n').filter(line => line.trim())
+          findings: lastResponse.content.split('\n').filter(line => line.trim()),
+          agent_outputs: agentOutputs || {},
+          strategic_reasoning: lastResponse.strategicReasoning || null
         },
         metadata: {
           agents_used: lastResponse.agents || [],
+          confidence_score: lastResponse.strategicReasoning?.confidenceScore || null,
           user: 'current_user'
         }
       };
@@ -268,7 +437,8 @@ export default function Chat() {
       const response = await api.post(`/reports/${format.toLowerCase()}`, payload);
 
       const link = document.createElement('a');
-      link.href = `${import.meta.env.VITE_API_URL || ''}/api/reports/download/${response.data.filename}`;
+      const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? window.location.origin : '');
+      link.href = `${apiBase}/api/reports/download/${response.data.filename}`;
       link.download = response.data.filename;
       link.click();
 
@@ -288,13 +458,27 @@ export default function Chat() {
   };
 
   return (
-    <div className="h-full flex flex-col max-w-7xl mx-auto">
+    <div className="chat-container flex-1 flex flex-col max-w-7xl mx-auto w-full" style={{ minHeight: 0 }}>
+      {/* Demo Mode Banner */}
+      <DemoModeBanner />
+      
+      {/* Master Agent Decision Flow */}
+      {masterAgentFlow && (
+        <MasterAgentDecisionFlow
+          query={masterAgentFlow.query}
+          intent={masterAgentFlow.intent}
+          subtasks={masterAgentFlow.subtasks}
+          agentsSelected={masterAgentFlow.agentsSelected}
+          reasoning={masterAgentFlow.reasoning}
+        />
+      )}
+      
       {/* Agent Orchestration Display (ENTERPRISE FEATURE) */}
       {loading && (
-        <div className="mb-4 medical-card bg-gradient-to-r from-yellow-400 to-yellow-500 border-2 border-black rounded-xl p-4 shadow-lg">
-          <div className="flex items-center justify-between">
+        <div className="mb-4 medical-card bg-gradient-to-r from-yellow-400 to-yellow-500 border-2 border-black rounded-xl p-4 shadow-lg" role="status" aria-live="polite" aria-label="AI processing status">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
-              <FaSpinner className="animate-spin text-2xl text-black" />
+              <FaSpinner className="animate-spin text-2xl text-black" aria-hidden="true" />
               <div>
                 <div className="font-bold text-black font-space-grotesk">Master Agent Orchestrating...</div>
                 <div className="text-sm text-black font-inter">
@@ -303,16 +487,19 @@ export default function Chat() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={stopGeneration}
-                className="px-4 py-2 bg-black text-yellow-400 rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2 font-semibold border-2 border-black"
-              >
-                <FaStop />
-                Stop Execution
-              </button>
+            <button
+              onClick={stopGeneration}
+              className="px-4 py-2 bg-black text-yellow-400 rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2 font-semibold border-2 border-black"
+              aria-label="Stop AI generation"
+              title="Stop AI generation"
+            >
+              <FaStop />
+              <span className="hidden sm:inline">Stop Execution</span>
+              <span className="sm:hidden">Stop</span>
+            </button>
             </div>
           </div>
-          <div className="mt-3 bg-black bg-opacity-20 rounded-full h-2">
+          <div className="mt-3 bg-black bg-opacity-20 rounded-full h-2" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Processing progress">
             <div
               className="bg-black h-full rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
@@ -323,28 +510,37 @@ export default function Chat() {
 
       {/* Header Actions */}
       {messages.length > 0 && (
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex gap-2">
+        <div className="mb-4 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button
               onClick={clearChat}
               className="btn-medical-secondary flex items-center gap-2 text-sm"
+              aria-label="Clear chat conversation"
+              title="Clear chat"
             >
               <FaTrash />
-              Clear Chat
+              <span className="hidden sm:inline">Clear Chat</span>
+              <span className="sm:hidden">Clear</span>
             </button>
             <button
               onClick={() => exportReport('PDF')}
               className="btn-medical-secondary flex items-center gap-2 text-sm"
+              aria-label="Export conversation as PDF"
+              title="Export PDF"
             >
               <FaFilePdf />
-              Export PDF
+              <span className="hidden sm:inline">Export PDF</span>
+              <span className="sm:hidden">PDF</span>
             </button>
             <button
               onClick={() => exportReport('Excel')}
               className="btn-medical-secondary flex items-center gap-2 text-sm"
+              aria-label="Export conversation as Excel"
+              title="Export Excel"
             >
               <FaFileExcel />
-              Export Excel
+              <span className="hidden sm:inline">Export Excel</span>
+              <span className="sm:hidden">Excel</span>
             </button>
           </div>
         </div>
@@ -352,22 +548,24 @@ export default function Chat() {
 
       {/* Conversation History Sidebar - Snap Values Style */}
       {conversations.length > 0 && (
-        <div className="mb-6 medical-card bg-white border-2 border-black rounded-xl p-6 shadow-lg">
-          <h3 className="text-base font-bold text-black mb-4 flex items-center gap-2 font-space-grotesk">
-            <FaSearch className="text-black" />
+        <div className="mb-6 medical-card bg-white border-2 border-black rounded-xl p-4 sm:p-6 shadow-lg">
+          <h3 className="text-sm sm:text-base font-bold text-black mb-4 flex items-center gap-2 font-space-grotesk">
+            <FaSearch className="text-black" aria-hidden="true" />
             Recent Conversations
           </h3>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3" role="group" aria-label="Recent conversations">
             {conversations.slice(0, 5).map((conv) => (
               <button
                 key={conv.id}
                 onClick={() => loadConversation(conv.id)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all border-2 ${conversationId === conv.id
+                className={`px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all border-2 ${conversationId === conv.id
                   ? 'bg-black text-yellow-400 border-black'
                   : 'bg-white text-black border-black hover:bg-black hover:text-yellow-400'
                   }`}
+                aria-label={`Load conversation: ${conv.title}`}
+                aria-pressed={conversationId === conv.id}
               >
-                {conv.title}
+                <span className="truncate max-w-[120px] sm:max-w-none">{conv.title}</span>
               </button>
             ))}
           </div>
@@ -377,20 +575,20 @@ export default function Chat() {
 
       {/* Welcome Message when no messages - Snap Values Style */}
       {messages.length === 0 && !loading && (
-        <div className="flex-1 flex items-center justify-center px-6 lg:px-12 py-12">
+        <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-12 py-8 sm:py-12 overflow-y-auto" style={{ minHeight: 0 }}>
           <div className="text-center max-w-4xl w-full">
-            <div className="mx-auto mb-8 w-64 h-64 flex items-center justify-center bg-black rounded-full border-8 border-yellow-400 shadow-2xl p-8">
-              <FaRobot className="w-full h-full text-yellow-400" />
+            <div className="mx-auto mb-6 sm:mb-8 w-48 h-48 sm:w-64 sm:h-64 flex items-center justify-center bg-black rounded-full border-4 sm:border-8 border-yellow-400 shadow-2xl p-6 sm:p-8">
+              <FaRobot className="w-full h-full text-yellow-400" aria-hidden="true" />
             </div>
-            <h2 className="text-4xl lg:text-5xl font-bold text-black mb-6 font-space-grotesk">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-black mb-4 sm:mb-6 font-space-grotesk">
               RepurposeIQ Assistant
             </h2>
-            <p className="text-xl lg:text-2xl text-black mb-12 font-inter font-medium leading-relaxed">
+            <p className="text-lg sm:text-xl lg:text-2xl text-black mb-8 sm:mb-12 font-inter font-medium leading-relaxed px-4">
               Ask questions about drug repurposing, clinical trials, patents, market analysis, and more.
               Our multi-agent system will provide comprehensive insights.
             </p>
             {syntheticQueries.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-8 px-2">
                 {syntheticQueries.slice(0, 4).map((query) => (
                   <button
                     key={query.id}
@@ -398,10 +596,11 @@ export default function Chat() {
                       setInput(query.query);
                       setTimeout(() => document.querySelector('form')?.requestSubmit(), 100);
                     }}
-                    className="medical-card bg-white border-2 border-black rounded-xl p-6 text-left hover:shadow-xl transition-all hover:-translate-y-1"
+                    className="medical-card bg-white border-2 border-black rounded-xl p-4 sm:p-6 text-left hover:shadow-xl transition-all hover:-translate-y-1"
+                    aria-label={`Use suggested query: ${query.query}`}
                   >
                     <div className="text-xs text-black font-bold mb-2 uppercase tracking-wide">{query.category}</div>
-                    <div className="text-base text-black font-inter leading-relaxed">{query.query}</div>
+                    <div className="text-sm sm:text-base text-black font-inter leading-relaxed">{query.query}</div>
                   </button>
                 ))}
               </div>
@@ -412,11 +611,13 @@ export default function Chat() {
 
       {/* Messages */}
       {messages.length > 0 && (
-        <div className="flex-1 overflow-y-auto space-y-6 mb-4 px-4">
+        <div className="chat-messages-container flex-1 overflow-y-auto space-y-6 mb-4 px-2 sm:px-4 medical-scrollbar" style={{ minHeight: 0 }} role="log" aria-live="polite" aria-label="Chat messages">
           {messages.map((msg, idx) => (
             <div
               key={idx}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} medical-fade-in`}
+              role="article"
+              aria-label={msg.role === 'user' ? 'Your message' : 'AI assistant response'}
             >
               <div className={`medical-message ${msg.role === 'user' ? 'message-user' : 'message-assistant'} max-w-3xl w-full`}>
                 <div className="flex items-start gap-3">
@@ -428,7 +629,34 @@ export default function Chat() {
                     <div className="text-xs font-semibold mb-2 text-black opacity-70">
                       {msg.role === 'user' ? 'You' : 'RepurposeIQ AI'}
                     </div>
-                    <div className="whitespace-pre-wrap text-black leading-relaxed font-inter break-words">{msg.content}</div>
+                    
+                    {/* Strategic Reasoning for assistant messages */}
+                    {msg.role === 'assistant' && msg.strategicReasoning && (
+                      <div className="mb-4">
+                        <StrategicReasoning
+                          reasoning={msg.strategicReasoning.reasoning}
+                          confidenceScore={msg.strategicReasoning.confidenceScore}
+                          decisionFactors={msg.strategicReasoning.decisionFactors}
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Charts/Visualizations */}
+                    {msg.role === 'assistant' && (
+                      <div className="mb-4">
+                        <AutoChartRenderer 
+                          content={msg.content} 
+                          agentType={msg.agents?.[0]?.toLowerCase() || ''}
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Markdown content with table support */}
+                    <div className="prose prose-sm max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
                     {msg.agents && msg.agents.length > 0 && (
                       <div className="mt-4 pt-4 border-t-2 border-black flex flex-wrap gap-2">
                         <span className="text-xs font-semibold text-black mr-2">Agents used:</span>
@@ -451,7 +679,7 @@ export default function Chat() {
 
           {/* Streaming text */}
           {streamingText && (
-            <div className="flex justify-start animate-fadeIn">
+            <div className="flex justify-start medical-fade-in">
               <div className="medical-message message-assistant max-w-3xl w-full">
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-full bg-yellow-400 border-2 border-black text-black flex items-center justify-center">
@@ -467,6 +695,21 @@ export default function Chat() {
             </div>
           )}
 
+          {/* Individual Agent Outputs (if available) */}
+          {Object.keys(agentOutputs).length > 0 && (
+            <div className="mb-6">
+              <div className="font-bold text-black mb-3 font-space-grotesk">Individual Agent Outputs:</div>
+              {Object.entries(agentOutputs).map(([agentName, output]) => (
+                <AgentOutputDisplay
+                  key={agentName}
+                  agentName={agentName}
+                  output={typeof output === 'string' ? output : output.content}
+                  dataSource={typeof output === 'object' ? output.dataSource : null}
+                />
+              ))}
+            </div>
+          )}
+          
           {/* Loading indicator */}
           {loading && !streamingText && (
             <div className="flex justify-start">
@@ -477,26 +720,42 @@ export default function Chat() {
         </div>
       )}
 
-      {/* Stop Button */}
-      {loading && (
+      {/* Stop Button - Only show if not already shown in orchestration banner */}
+      {loading && executionStatus !== 'running' && (
         <div className="flex justify-center mb-4">
           <button
             onClick={stopGeneration}
             className="btn-medical-secondary px-6 py-2 flex items-center gap-2"
+            aria-label="Stop generating response"
+            title="Stop generating response"
           >
-            <span className="w-3 h-3 bg-black"></span>
-            Stop Generating
+            <FaStop />
+            <span className="hidden sm:inline">Stop Generating</span>
+            <span className="sm:hidden">Stop</span>
           </button>
         </div>
       )}
 
       {/* Voice Wave Animation Overlay */}
       {isListening && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-white p-8 rounded-2xl flex flex-col items-center animate-bounce-in">
-            <img src="/images/voice-wave-animation.png" alt="Listening..." className="w-32 h-16 object-contain mb-4 animate-pulse" />
-            <p className="font-space-grotesk font-bold text-xl">Listening...</p>
-            <button onClick={stopVoiceRecognition} className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-bold">Cancel</button>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="voice-listening-title">
+          <div className="bg-white p-8 rounded-2xl flex flex-col items-center border-2 border-black shadow-lg">
+            <div className="flex gap-2 mb-4">
+              <div className="w-3 h-12 bg-black rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-3 h-16 bg-black rounded-full animate-pulse" style={{ animationDelay: '100ms' }}></div>
+              <div className="w-3 h-20 bg-black rounded-full animate-pulse" style={{ animationDelay: '200ms' }}></div>
+              <div className="w-3 h-16 bg-black rounded-full animate-pulse" style={{ animationDelay: '300ms' }}></div>
+              <div className="w-3 h-12 bg-black rounded-full animate-pulse" style={{ animationDelay: '400ms' }}></div>
+            </div>
+            <p id="voice-listening-title" className="font-space-grotesk font-bold text-xl text-black mb-2">Listening...</p>
+            <p className="text-sm text-black opacity-70 mb-4">Speak your question clearly</p>
+            <button 
+              onClick={stopVoiceRecognition} 
+              className="mt-4 px-6 py-2 bg-red-500 text-white rounded-lg text-sm font-bold hover:bg-red-600 transition-colors border-2 border-black"
+              aria-label="Stop voice recognition"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
@@ -516,30 +775,30 @@ export default function Chat() {
         </div>
       )}
 
-      {/* Query Suggestions - Only show when there are messages or input */}
-      {(messages.length > 0 || input) && (
-        <QuerySuggestions
-          currentQuery={input}
-          onSelectSuggestion={(query) => {
-            setInput(query);
-            setTimeout(() => document.querySelector('form')?.requestSubmit(), 100);
-          }}
-        />
-      )}
-
-      {/* Input Form */}
-      <div className="mt-auto">
+      {/* Input Form - Fixed at bottom */}
+      <div className="chat-input-container mt-auto flex-shrink-0">
+        {/* Query Suggestions - Only show when there are messages or input */}
+        {(messages.length > 0 || input) && (
+          <QuerySuggestions
+            currentQuery={input}
+            onSelectSuggestion={(query) => {
+              setInput(query);
+              setTimeout(() => document.querySelector('form')?.requestSubmit(), 100);
+            }}
+          />
+        )}
         {/* Input Methods */}
         <div className="mb-4">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Input method selection">
             {[
-              { id: 'text', icon: FaPaperPlane, label: 'Text' },
-              { id: 'voice', icon: FaMicrophone, label: 'Voice' },
-              { id: 'image', icon: FaImage, label: 'Image' },
-              { id: 'file', icon: FaFile, label: 'File' },
-              { id: 'multimodal', icon: FaFlask, label: 'AI Analysis' }
+              { id: 'text', icon: FaPaperPlane, label: 'Text', mobileLabel: 'Text', ariaLabel: 'Text input' },
+              { id: 'voice', icon: FaMicrophone, label: 'Voice', mobileLabel: 'Voice', ariaLabel: 'Voice input' },
+              { id: 'image', icon: FaImage, label: 'Image', mobileLabel: 'Img', ariaLabel: 'Image upload' },
+              { id: 'file', icon: FaFile, label: 'File', mobileLabel: 'File', ariaLabel: 'File upload' },
+              { id: 'multimodal', icon: FaFlask, label: 'AI Analysis', mobileLabel: 'AI', ariaLabel: 'AI multimodal analysis' }
             ].map((method) => {
               const Icon = method.icon;
+              const isActive = inputMethod === method.id || (method.id === 'voice' && isListening) || (method.id === 'multimodal' && showMultiModal);
               return (
                 <button
                   key={method.id}
@@ -558,13 +817,18 @@ export default function Chat() {
                       if (method.id === 'file') fileInputRef.current?.click();
                     }
                   }}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${(inputMethod === method.id || (method.id === 'voice' && isListening) || (method.id === 'multimodal' && showMultiModal))
+                  className={`px-3 md:px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-1 md:gap-2 text-sm md:text-base ${isActive
                     ? 'bg-black text-yellow-400 border-2 border-black'
                     : 'bg-white text-black border-2 border-transparent hover:border-black hover:bg-yellow-50'
-                    } ${isListening && method.id === 'voice' ? 'animate-pulse' : ''}`}
+                    } ${isListening && method.id === 'voice' ? 'animate-pulse' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
+                  title={method.label}
+                  aria-label={method.ariaLabel}
+                  aria-pressed={isActive}
+                  disabled={loading && method.id !== 'voice'}
                 >
-                  <Icon />
-                  {method.id === 'voice' && isListening ? 'Listening...' : method.label}
+                  <Icon className="text-sm md:text-base" aria-hidden="true" />
+                  <span className="hidden sm:inline">{method.id === 'voice' && isListening ? 'Listening...' : method.label}</span>
+                  <span className="sm:hidden">{method.id === 'voice' && isListening ? '...' : method.mobileLabel}</span>
                 </button>
               );
             })}
@@ -598,7 +862,8 @@ export default function Chat() {
         {/* Input Form */}
         <form
           onSubmit={handleSubmit}
-          className="flex gap-3"
+          className="flex gap-2 md:gap-3"
+          aria-label="Chat input form"
         >
           <div className="flex-1 relative">
             <input
@@ -606,14 +871,20 @@ export default function Chat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about pharmaceutical strategy, patents, trials, markets..."
-              className="medical-input w-full pr-12"
+              className="medical-input w-full pr-10 md:pr-12 text-sm md:text-base"
               disabled={loading}
+              aria-label="Chat input"
+              aria-describedby="input-help-text"
+              maxLength={2000}
             />
+            <span id="input-help-text" className="sr-only">Enter your question about drug repurposing, clinical trials, patents, or market analysis</span>
             {input && (
               <button
                 type="button"
                 onClick={() => setInput('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-2 md:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg md:text-xl transition-colors"
+                aria-label="Clear input"
+                title="Clear input"
               >
                 ✕
               </button>
@@ -622,10 +893,12 @@ export default function Chat() {
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="btn-medical-primary px-8 flex items-center gap-2"
+            className="btn-medical-primary px-4 md:px-8 flex items-center gap-1 md:gap-2 text-sm md:text-base flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Send message"
+            aria-disabled={loading || !input.trim()}
           >
-            <FaPaperPlane />
-            <span>Send</span>
+            <FaPaperPlane className="text-sm md:text-base" />
+            <span className="hidden sm:inline">Send</span>
           </button>
         </form>
       </div>

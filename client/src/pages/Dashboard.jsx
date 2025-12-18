@@ -54,7 +54,8 @@ export default function Dashboard() {
       });
 
       const link = document.createElement('a');
-      link.href = `${import.meta.env.VITE_API_URL || ''}/api/reports/download/${response.data.filename}`;
+      const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? window.location.origin : '');
+      link.href = `${apiBase}/api/reports/download/${response.data.filename}`;
       link.download = response.data.filename;
       link.click();
 
@@ -212,23 +213,21 @@ export default function Dashboard() {
               </h3>
             </div>
             <div className="medical-card-body p-6">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={data?.marketData?.slice(0, 5) || []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="molecule" stroke="#6b7280" />
-                  <YAxis stroke="#6b7280" />
-                  <Tooltip
-                    contentStyle={{
-                      background: '#fff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-                    }}
-                  />
-                  <Legend />
-                  <Bar dataKey="market_size_usd_mn" fill="#0066cc" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <BarChart width={500} height={300} data={data?.marketData?.slice(0, 5) || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="molecule" stroke="#6b7280" />
+                <YAxis stroke="#6b7280" />
+                <Tooltip
+                  contentStyle={{
+                    background: '#fff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="market_size_usd_mn" fill="#0066cc" radius={[8, 8, 0, 0]} />
+              </BarChart>
             </div>
             <div className="border-t-2 border-black p-4 bg-gray-50">
               <div className="flex items-center gap-2 text-sm text-black font-inter">
@@ -245,31 +244,29 @@ export default function Dashboard() {
               <h3 className="text-lg font-semibold text-yellow-400">Therapy Area Distribution</h3>
             </div>
             <div className="medical-card-body p-6">
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={data?.marketData || []}
-                    dataKey="market_size_usd_mn"
-                    nameKey="therapy_area"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    fill="#8884d8"
-                    label
-                  >
-                    {(data?.marketData || []).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      background: '#fff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px'
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <PieChart width={500} height={300}>
+                <Pie
+                  data={data?.marketData || []}
+                  dataKey="market_size_usd_mn"
+                  nameKey="therapy_area"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  fill="#8884d8"
+                  label
+                >
+                  {(data?.marketData || []).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    background: '#fff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px'
+                  }}
+                />
+              </PieChart>
             </div>
             <div className="border-t-2 border-black p-4 bg-gray-50">
               <div className="flex items-center gap-2 text-sm text-black font-inter">
@@ -286,27 +283,25 @@ export default function Dashboard() {
               <h3 className="text-lg font-semibold text-yellow-400">Growth Trends</h3>
             </div>
             <div className="medical-card-body p-6">
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={data?.marketData?.slice(0, 6) || []}>
-                  <defs>
-                    <linearGradient id="colorCAGR" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0066cc" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#0066cc" stopOpacity={0.1} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="molecule" stroke="#6b7280" />
-                  <YAxis stroke="#6b7280" />
-                  <Tooltip
-                    contentStyle={{
-                      background: '#fff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px'
-                    }}
-                  />
-                  <Area type="monotone" dataKey="cagr_percent" stroke="#0066cc" fillOpacity={1} fill="url(#colorCAGR)" />
-                </AreaChart>
-              </ResponsiveContainer>
+              <AreaChart width={500} height={300} data={data?.marketData?.slice(0, 6) || []}>
+                <defs>
+                  <linearGradient id="colorCAGR" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0066cc" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#0066cc" stopOpacity={0.1} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="molecule" stroke="#6b7280" />
+                <YAxis stroke="#6b7280" />
+                <Tooltip
+                  contentStyle={{
+                    background: '#fff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px'
+                  }}
+                />
+                <Area type="monotone" dataKey="cagr_percent" stroke="#0066cc" fillOpacity={1} fill="url(#colorCAGR)" />
+              </AreaChart>
             </div>
             <div className="border-t-2 border-black p-4 bg-gray-50">
               <div className="flex items-center gap-2 text-sm text-black font-inter">
@@ -323,23 +318,21 @@ export default function Dashboard() {
               <h3 className="text-lg font-semibold text-yellow-400">Market Comparison</h3>
             </div>
             <div className="medical-card-body p-6">
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={data?.marketData?.slice(0, 5) || []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="molecule" stroke="#6b7280" />
-                  <YAxis stroke="#6b7280" />
-                  <Tooltip
-                    contentStyle={{
-                      background: '#fff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px'
-                    }}
-                  />
-                  <Legend />
-                  <Line type="monotone" dataKey="market_size_usd_mn" stroke="#0066cc" strokeWidth={2} />
-                  <Line type="monotone" dataKey="cagr_percent" stroke="#00d4aa" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
+              <LineChart width={500} height={300} data={data?.marketData?.slice(0, 5) || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="molecule" stroke="#6b7280" />
+                <YAxis stroke="#6b7280" />
+                <Tooltip
+                  contentStyle={{
+                    background: '#fff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px'
+                  }}
+                />
+                <Legend />
+                <Line type="monotone" dataKey="market_size_usd_mn" stroke="#0066cc" strokeWidth={2} />
+                <Line type="monotone" dataKey="cagr_percent" stroke="#00d4aa" strokeWidth={2} />
+              </LineChart>
             </div>
             <div className="border-t-2 border-black p-4 bg-gray-50">
               <div className="flex items-center gap-2 text-sm text-black font-inter">

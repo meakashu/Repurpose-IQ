@@ -22,11 +22,51 @@ const verifyAuth = (req, res, next) => {
   }
 };
 
+// Helper to detect follow-up questions
+function isFollowUpQuestion(query, previousMessages) {
+  if (!previousMessages || previousMessages.length === 0) return false;
+  
+  const followUpPatterns = [
+    /^(what about|tell me more|how about|what is|can you|show me|explain)/i,
+    /^(and|also|additionally|furthermore|moreover)/i,
+    /^(what|how|why|when|where|which|who).*\?/i
+  ];
+  
+  const queryLower = query.toLowerCase();
+  const isShort = query.split(' ').length < 5;
+  
+  return followUpPatterns.some(pattern => pattern.test(query)) || 
+         (isShort && previousMessages.length > 0);
+}
+
 // Process query
 router.post('/', verifyAuth, async (req, res) => {
   try {
     const { query, conversationId } = req.body;
     const userId = req.user.userId;
+    
+    // Get conversation context for follow-up questions
+    let conversationContext = null;
+    let isFollowUp = false;
+    
+    if (conversationId) {
+      try {
+        const { ConversationService } = await import('../services/conversationService.js');
+        const conversation = ConversationService.getConversation(conversationId);
+        if (conversation && conversation.messages) {
+          conversationContext = conversation.messages.slice(-5); // Last 5 messages
+          
+          // Detect if this is a follow-up question
+          isFollowUp = isFollowUpQuestion(query, conversationContext);
+          
+          if (isFollowUp) {
+            console.log('Follow-up question detected, enriching query with context');
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load conversation context:', error);
+      }
+    }
 
     if (!query) {
       return res.status(400).json({ error: 'Query is required' });
@@ -71,7 +111,7 @@ router.post('/', verifyAuth, async (req, res) => {
     // Fallback to Node.js Master Agent
     try {
       const masterAgent = new MasterAgent();
-      result = await masterAgent.processQuery(query, userId);
+      result = await masterAgent.processQuery(query, userId, conversationContext, conversationId);
       
       // Record API usage
       RateLimiter.recordUsage('groq', userId);
@@ -80,7 +120,11 @@ router.post('/', verifyAuth, async (req, res) => {
         response: result.response,
         agents: result.agents,
         conversationId: result.conversationId || conversationId,
-        service: 'nodejs'
+        service: 'nodejs',
+        agentOutputs: result.agentOutputs,
+        masterAgentFlow: result.masterAgentFlow,
+        strategicReasoning: result.strategicReasoning,
+        isFollowUp: isFollowUp || false
       });
     } catch (agentError) {
       console.error('Master Agent error:', agentError);

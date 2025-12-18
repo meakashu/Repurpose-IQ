@@ -29,33 +29,9 @@ router.post('/', async (req, res) => {
 
         const result = stmt.run(name, email, company || null, message);
 
-        // ==========================================
-        // EMAIL NOTIFICATION (NOT YET IMPLEMENTED)
-        // ==========================================
-        // To enable email notifications for contact form submissions:
-        // 
-        // 1. Install nodemailer: npm install nodemailer
-        // 2. Configure SMTP settings in .env (see .env.example)
-        // 3. Uncomment and update the code below:
-        //
-        // import nodemailer from 'nodemailer';
-        // const transporter = nodemailer.createTransport({
-        //   host: process.env.SMTP_HOST,
-        //   port: process.env.SMTP_PORT,
-        //   auth: {
-        //     user: process.env.SMTP_USER,
-        //     pass: process.env.SMTP_PASS,
-        //   },
-        // });
-        // await transporter.sendMail({
-        //   from: process.env.SMTP_FROM,
-        //   to: 'admin@repurposeiq.com',
-        //   subject: `New Contact Form: ${name}`,
-        //   text: `From: ${name} (${email})\nCompany: ${company || 'N/A'}\n\nMessage:\n${message}`,
-        // });
-        //
-        // Alternative: Use SendGrid, Mailgun, or AWS SES API
-        // ==========================================
+        // TODO: Send email notification
+        // This would integrate with nodemailer or similar service
+        // For now, we just store in database
 
         res.json({
             success: true,

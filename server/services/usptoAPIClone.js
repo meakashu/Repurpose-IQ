@@ -41,13 +41,25 @@ export class USPTOAPIClone {
     cutoffDate.setFullYear(cutoffDate.getFullYear() + years);
 
     const patents = db.prepare(`
-      SELECT * FROM patents 
+      SELECT DISTINCT molecule, patent_number, patent_type, expiry_date, status
+      FROM patents 
       WHERE status = 'active' AND expiry_date <= ?
       ORDER BY expiry_date ASC
     `).all(cutoffDate.toISOString().split('T')[0]);
 
-    const timeline = {};
+    // Additional deduplication by patent_number + molecule
+    const seen = new Set();
+    const uniquePatents = [];
     patents.forEach(patent => {
+      const key = `${patent.molecule}|${patent.patent_number}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniquePatents.push(patent);
+      }
+    });
+
+    const timeline = {};
+    uniquePatents.forEach(patent => {
       const year = new Date(patent.expiry_date).getFullYear();
       if (!timeline[year]) {
         timeline[year] = [];
@@ -62,9 +74,9 @@ export class USPTOAPIClone {
 
     return {
       timeline_years: years,
-      expiring_patents: patents.length,
+      expiring_patents: uniquePatents.length,
       timeline_by_year: timeline,
-      opportunities: this.identifyOpportunities(patents)
+      opportunities: this.identifyOpportunities(uniquePatents)
     };
   }
 

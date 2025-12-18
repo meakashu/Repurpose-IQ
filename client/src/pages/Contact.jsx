@@ -1,20 +1,31 @@
 import { useState } from 'react';
 import { FaEnvelope, FaPhone, FaMapMarkerAlt, FaPaperPlane } from 'react-icons/fa';
 import toast from 'react-hot-toast';
+import api from '../utils/api';
 
 export default function Contact() {
     const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-        // Simulate API call
-        setTimeout(() => {
-            toast.success("Message sent successfully! We'll allow 24-48 hours for a response.");
+        try {
+            const response = await api.post('/contact', {
+                name: formData.name,
+                email: formData.email,
+                company: formData.subject, // Using subject as company field
+                message: formData.message
+            });
+            
+            toast.success(response.data.message || "Message sent successfully! We'll respond within 24-48 hours.");
             setFormData({ name: '', email: '', subject: '', message: '' });
+        } catch (error) {
+            console.error('Contact form error:', error);
+            toast.error(error.response?.data?.error || 'Failed to send message. Please try again.');
+        } finally {
             setLoading(false);
-        }, 1500);
+        }
     };
 
     return (

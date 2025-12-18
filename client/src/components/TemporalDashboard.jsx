@@ -41,12 +41,27 @@ export default function TemporalDashboard({ molecule, timeRange = '5years' }) {
   const loadTemporalData = async () => {
     setLoading(true);
     try {
-      // Fetch market forecast
-      const forecastRes = await api.post('/api/predictions/market-forecast', {
+      // First, fetch real market data for the molecule
+      let currentMarketSize = 1000;
+      let cagr = 8.5;
+      
+      try {
+        const dashboardRes = await api.get('/dashboard/data');
+        const moleculeData = dashboardRes.data.marketData.find(d => d.molecule === molecule);
+        if (moleculeData) {
+          currentMarketSize = moleculeData.market_size_usd_mn || 1000;
+          cagr = moleculeData.cagr_percent || 8.5;
+        }
+      } catch (error) {
+        console.warn('Failed to load market data, using defaults:', error);
+      }
+
+      // Fetch market forecast with real data
+      const forecastRes = await api.post('/predictions/market-forecast', {
         molecule,
         indication: 'Various',
-        current_market_size: 1000,
-        cagr: 8.5,
+        current_market_size: currentMarketSize,
+        cagr: cagr,
         years: 5
       }).catch(() => ({ data: null }));
 

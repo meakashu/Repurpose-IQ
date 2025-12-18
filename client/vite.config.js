@@ -8,23 +8,9 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-    },
-  },
-  build: {
-    chunkSizeWarningLimit: 1000,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'charts': ['chart.js', 'react-chartjs-2', 'recharts'],
-          'd3-vendor': ['d3', 'react-force-graph', 'react-force-graph-2d'],
-          'animation': ['framer-motion', 'gsap', 'locomotive-scroll', 'swup'],
-          'ui-vendor': ['react-icons', 'react-hot-toast', 'axios', 'socket.io-client'],
-        },
-      },
-    },
+        changeOrigin: true
+      }
+    }
   },
   optimizeDeps: {
     include: ['regenerator-runtime']

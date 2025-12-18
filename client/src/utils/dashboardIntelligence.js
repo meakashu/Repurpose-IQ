@@ -34,11 +34,18 @@ export function generateMarketInsights(marketData) {
     // Detect patent cliff risks (negative CAGR)
     const patentCliff = marketData.filter(m => m.cagr_percent < 0);
     if (patentCliff.length > 0) {
-        const molecules = patentCliff.map(m => m.molecule).join(', ');
+        // Deduplicate molecules and avoid excessively long lists
+        const uniqueMolecules = Array.from(new Set(patentCliff.map(m => m.molecule)));
+        const displayCount = 5;
+        const displayMolecules = uniqueMolecules.slice(0, displayCount).join(', ');
+        const additionalCount = uniqueMolecules.length > displayCount
+            ? ` (+${uniqueMolecules.length - displayCount} others)`
+            : '';
+
         insights.push({
             type: 'risk',
             title: 'Patent Cliff Alert',
-            message: `${molecules} showing market erosion (negative CAGR), signaling biosimilar competition and repurposing opportunities.`,
+            message: `${displayMolecules}${additionalCount} showing market erosion (negative CAGR), signaling biosimilar competition and repurposing opportunities.`,
             priority: 'critical'
         });
     }

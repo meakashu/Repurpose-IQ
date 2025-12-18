@@ -13,7 +13,8 @@ export default function ClinicalTrialAlerts() {
 
   useEffect(() => {
     // Initialize WebSocket connection
-    const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:3000', {
+    const apiUrl = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? window.location.origin : 'http://localhost:3000');
+    const newSocket = io(apiUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
@@ -72,7 +73,7 @@ export default function ClinicalTrialAlerts() {
 
   const loadAlerts = async () => {
     try {
-      const response = await api.get('/api/monitoring/alerts?viewed=false&limit=20');
+      const response = await api.get('/monitoring/alerts?viewed=false&limit=20');
       setAlerts(response.data.alerts || []);
     } catch (error) {
       console.error('Failed to load alerts:', error);
@@ -90,7 +91,7 @@ export default function ClinicalTrialAlerts() {
       setMoleculeInput('');
     } else {
       // Fallback to REST API
-      api.post('/api/monitoring/add-molecule', { molecule: moleculeInput.trim() })
+      api.post('/monitoring/add-molecule', { molecule: moleculeInput.trim() })
         .then(() => {
           toast.success(`Now monitoring ${moleculeInput.trim()}`);
           loadAlerts();
@@ -106,7 +107,7 @@ export default function ClinicalTrialAlerts() {
     if (socket) {
       socket.emit('unsubscribe-molecule', molecule);
     } else {
-      api.post('/api/monitoring/remove-molecule', { molecule })
+      api.post('/monitoring/remove-molecule', { molecule })
         .then(() => {
           toast.success(`Stopped monitoring ${molecule}`);
           loadAlerts();
@@ -119,7 +120,7 @@ export default function ClinicalTrialAlerts() {
 
   const markAlertAsRead = async (alertId) => {
     try {
-      await api.post(`/api/monitoring/alerts/${alertId}/read`);
+      await api.post(`/monitoring/alerts/${alertId}/read`);
       setAlerts(alerts.filter(a => a.id !== alertId));
       toast.success('Alert marked as read');
     } catch (error) {
@@ -129,7 +130,7 @@ export default function ClinicalTrialAlerts() {
 
   const markAllAsRead = async () => {
     try {
-      await api.post('/api/monitoring/alerts/read-all');
+      await api.post('/monitoring/alerts/read-all');
       setAlerts([]);
       toast.success('All alerts marked as read');
     } catch (error) {

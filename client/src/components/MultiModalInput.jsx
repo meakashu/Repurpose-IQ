@@ -19,10 +19,10 @@ export default function MultiModalInput({ onAnalysisComplete }) {
     try {
       const formData = new FormData();
       const endpoint = type === 'structure' 
-        ? '/api/vision/recognize-structure'
+        ? '/vision/recognize-structure'
         : type === 'document'
-        ? '/api/vision/process-document'
-        : '/api/vision/analyze-image';
+        ? '/vision/process-document'
+        : '/vision/analyze-image';
 
       formData.append(type === 'document' ? 'document' : 'image', file);
 

@@ -19,7 +19,7 @@ export default function QuerySuggestions({ currentQuery = '', onSelectSuggestion
   const loadSuggestions = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/suggestions?query=${encodeURIComponent(currentQuery)}&limit=5');
+      const response = await api.get(`/suggestions?query=${encodeURIComponent(currentQuery)}&limit=5`);
       setSuggestions(response.data.suggestions || []);
     } catch (error) {
       console.error('Error loading suggestions:', error);

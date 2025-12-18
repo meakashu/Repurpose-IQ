@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import api from '../utils/api';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { FaBalanceScale, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 
 export default function Compare() {
   const [molecules, setMolecules] = useState([]);
   const [selectedMolecules, setSelectedMolecules] = useState([]);
   const [comparisonData, setComparisonData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [comparing, setComparing] = useState(false);
 
   useEffect(() => {
     fetchMolecules();
@@ -17,6 +19,9 @@ export default function Compare() {
   useEffect(() => {
     if (selectedMolecules.length >= 2) {
       compareMolecules();
+    } else {
+      // Reset comparison data when selection is less than 2
+      setComparisonData(null);
     }
   }, [selectedMolecules]);
 
@@ -27,20 +32,32 @@ export default function Compare() {
       setMolecules(uniqueMolecules.filter(Boolean));
     } catch (error) {
       console.error('Failed to load molecules:', error);
+      toast.error('Failed to load molecules. Using fallback data.');
     } finally {
       setLoading(false);
     }
   };
 
   const compareMolecules = async () => {
+    setComparing(true);
     try {
       const response = await api.get('/dashboard/data');
       const data = response.data.marketData.filter(d => 
         selectedMolecules.includes(d.molecule)
       );
-      setComparisonData(data);
+      
+      if (data.length === 0) {
+        toast.error('No data found for selected molecules.');
+        setComparisonData(null);
+      } else {
+        setComparisonData(data);
+      }
     } catch (error) {
       console.error('Failed to compare molecules:', error);
+      toast.error('Failed to compare molecules. Please try again.');
+      setComparisonData(null);
+    } finally {
+      setComparing(false);
     }
   };
 
@@ -113,20 +130,31 @@ export default function Compare() {
               <h3 className="text-lg font-semibold">Market Size Comparison</h3>
             </div>
             <div className="medical-card-body">
-              <BarChart width={500} height={300} data={comparisonData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="molecule" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" />
-                <Tooltip 
-                  contentStyle={{ 
-                    background: '#fff', 
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Legend />
-                <Bar dataKey="market_size_usd_mn" fill="#0066cc" radius={[8, 8, 0, 0]} />
-              </BarChart>
+              {comparing ? (
+                <div className="flex items-center justify-center h-[300px]">
+                  <div className="text-center">
+                    <div className="medical-spinner mx-auto mb-4"></div>
+                    <p className="text-gray-600">Comparing molecules...</p>
+                  </div>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={comparisonData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="molecule" stroke="#6b7280" />
+                    <YAxis stroke="#6b7280" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        background: '#fff', 
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Legend />
+                    <Bar dataKey="market_size_usd_mn" fill="#0066cc" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </motion.div>
 
@@ -139,20 +167,31 @@ export default function Compare() {
               <h3 className="text-lg font-semibold">CAGR Comparison</h3>
             </div>
             <div className="medical-card-body">
-              <BarChart width={500} height={300} data={comparisonData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="molecule" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" />
-                <Tooltip 
-                  contentStyle={{ 
-                    background: '#fff', 
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Legend />
-                <Bar dataKey="cagr_percent" fill="#00d4aa" radius={[8, 8, 0, 0]} />
-              </BarChart>
+              {comparing ? (
+                <div className="flex items-center justify-center h-[300px]">
+                  <div className="text-center">
+                    <div className="medical-spinner mx-auto mb-4"></div>
+                    <p className="text-gray-600">Comparing molecules...</p>
+                  </div>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={comparisonData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="molecule" stroke="#6b7280" />
+                    <YAxis stroke="#6b7280" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        background: '#fff', 
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Legend />
+                    <Bar dataKey="cagr_percent" fill="#00d4aa" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </motion.div>
         </div>
