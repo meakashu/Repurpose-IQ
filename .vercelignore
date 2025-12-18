@@ -1,0 +1,37 @@
+# Python service (excluded entirely)
+python-service/
+python-service/**
+python-service/**/*
+
+# Docker files (not needed for Vercel)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Python files
+*.py
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Database files (will be created in /tmp on Vercel)
+*.db
+*.db-shm
+*.db-wal
+
+# Reports and uploads (will use /tmp on Vercel)
+reports/
+uploads/
+
+# Development files
+node_modules/
+.git/
+.vscode/
+.idea/
+
