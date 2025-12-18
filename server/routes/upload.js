@@ -10,8 +10,8 @@ const __dirname = dirname(__filename);
 
 const router = express.Router();
 
-// Ensure uploads directory exists
-const uploadsDir = join(__dirname, '../../uploads');
+// For Vercel, use /tmp directory; otherwise use uploads directory
+const uploadsDir = process.env.VERCEL ? '/tmp/uploads' : join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -19,6 +19,10 @@ if (!fs.existsSync(uploadsDir)) {
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
+    // Ensure directory exists (important for Vercel /tmp)
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
     cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
@@ -39,7 +43,7 @@ router.post('/image', upload.single('image'), async (req, res) => {
     }
 
     // Process image with sharp
-    const processedPath = join(__dirname, '../../uploads', `processed-${req.file.filename}`);
+    const processedPath = join(uploadsDir, `processed-${req.file.filename}`);
     await sharp(req.file.path)
       .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
       .toFile(processedPath);

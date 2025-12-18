@@ -142,10 +142,44 @@ export function TrialPhaseChart({ data }) {
   );
 }
 
+import MultiCriteriaRadarChart from './RadarChart';
+import DecisionHeatmap from './DecisionHeatmap';
+
 // Auto-detect and render appropriate charts
-export function AutoChartRenderer({ content, agentType }) {
+export function AutoChartRenderer({ content, agentType, chartData }) {
   if (!content) return null;
 
+  // Check for structured chart data first (from backend)
+  if (chartData) {
+    if (chartData.radarChart) {
+      return <MultiCriteriaRadarChart data={chartData.radarChart} />;
+    }
+    if (chartData.heatmap) {
+      return <DecisionHeatmap data={chartData.heatmap} />;
+    }
+  }
+
+  // Try to extract JSON chart data from content
+  const jsonMatches = content.match(/```json\s*({[\s\S]*?})\s*```/g);
+  if (jsonMatches) {
+    for (const match of jsonMatches) {
+      try {
+        const jsonStr = match.replace(/```json\s*|\s*```/g, '');
+        const parsed = JSON.parse(jsonStr);
+        
+        if (parsed.radarChart) {
+          return <MultiCriteriaRadarChart data={parsed.radarChart} />;
+        }
+        if (parsed.heatmap) {
+          return <DecisionHeatmap data={parsed.heatmap} />;
+        }
+      } catch (e) {
+        // Continue to next match
+      }
+    }
+  }
+
+  // Fallback to agent-specific charts
   if (agentType === 'patent' || content.includes('Patent') || content.includes('expiry')) {
     return <PatentExpiryChart data={content} />;
   }

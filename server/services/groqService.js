@@ -28,7 +28,7 @@ export async function chatCompletion(messages, options = {}) {
       messages: messages,
       temperature: options.temperature || 0.3,
       // Use max_completion_tokens (new) or max_tokens (deprecated but still supported)
-      max_completion_tokens: options.max_completion_tokens || options.max_tokens || 1024,
+      max_completion_tokens: options.max_completion_tokens || options.max_tokens || 4096, // Increased for structured responses
       ...options
     });
 

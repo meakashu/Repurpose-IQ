@@ -110,8 +110,10 @@ router.post('/', verifyAuth, async (req, res) => {
     
     // Fallback to Node.js Master Agent
     try {
+      console.log(`[QueryRoute] Processing query via Master Agent`);
       const masterAgent = new MasterAgent();
       result = await masterAgent.processQuery(query, userId, conversationContext, conversationId);
+      console.log(`[QueryRoute] ✓ Query processed successfully`);
       
       // Record API usage
       RateLimiter.recordUsage('groq', userId);
@@ -124,6 +126,7 @@ router.post('/', verifyAuth, async (req, res) => {
         agentOutputs: result.agentOutputs,
         masterAgentFlow: result.masterAgentFlow,
         strategicReasoning: result.strategicReasoning,
+        chartData: result.chartData || null, // Include chart data
         isFollowUp: isFollowUp || false
       });
     } catch (agentError) {

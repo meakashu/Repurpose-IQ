@@ -15,8 +15,20 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-const db = new Database(dbPath);
-db.pragma('journal_mode = WAL');
+// Initialize database connection
+let db;
+try {
+  db = new Database(dbPath);
+  db.pragma('journal_mode = WAL');
+  
+  // For Vercel, ensure database is ready
+  if (process.env.VERCEL) {
+    console.log('[Database] Using Vercel /tmp storage:', dbPath);
+  }
+} catch (error) {
+  console.error('[Database] Failed to initialize:', error);
+  throw error;
+}
 
 // Initialize database schema
 export function initDatabase() {

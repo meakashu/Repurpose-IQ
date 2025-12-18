@@ -43,21 +43,31 @@ router.get('/', (req, res) => {
 
 // Generate PDF report
 router.post('/pdf', (req, res) => {
+  console.log('\n[ReportGenerator] ========================================');
+  console.log('[ReportGenerator] PDF generation requested');
+  console.log(`[ReportGenerator] Timestamp: ${new Date().toISOString()}`);
+  
   try {
     const { title, query, content, metadata } = req.body;
+    console.log(`[ReportGenerator] Title: ${title || 'Pharma Strategy Analysis'}`);
+    console.log(`[ReportGenerator] Query length: ${query?.length || 0} chars`);
+    console.log(`[ReportGenerator] Content length: ${content?.length || 0} chars`);
 
     const filename = `report_${Date.now()}.pdf`;
     // For Vercel, use /tmp directory; otherwise use reports directory
     const reportsDir = process.env.VERCEL ? '/tmp/reports' : join(__dirname, '../../reports');
     const filepath = join(reportsDir, filename);
+    console.log(`[ReportGenerator] Saving to: ${filepath}`);
 
     // Ensure reports directory exists
     if (!fs.existsSync(reportsDir)) {
       fs.mkdirSync(reportsDir, { recursive: true });
+      console.log(`[ReportGenerator] Created reports directory: ${reportsDir}`);
     }
 
     const doc = new PDFDocument({ margin: 50 });
-    doc.pipe(fs.createWriteStream(filepath));
+    const writeStream = fs.createWriteStream(filepath);
+    doc.pipe(writeStream);
 
     // Title
     doc.fontSize(20).font('Helvetica-Bold').text(title || 'Pharma Strategy Analysis', { align: 'center' });
@@ -113,11 +123,23 @@ router.post('/pdf', (req, res) => {
     doc.moveDown();
     doc.fontSize(8).font('Helvetica-Oblique').text('Note: This report was generated using mock/simulated data for demonstration purposes.');
 
-    doc.end();
+    // Wait for PDF to finish writing before responding
+    writeStream.on('finish', () => {
+      console.log(`[ReportGenerator] ✓ PDF created successfully: ${filename}`);
+      console.log(`[ReportGenerator] ========================================\n`);
+      res.json({ filename, path: filepath });
+    });
 
-    res.json({ filename, path: filepath });
+    writeStream.on('error', (error) => {
+      console.error('[ReportGenerator] ✗ PDF write stream error:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'PDF generation failed' });
+      }
+    });
+
+    doc.end();
   } catch (error) {
-    console.error('PDF generation error:', error);
+    console.error('[ReportGenerator] ✗ PDF generation error:', error);
     res.status(500).json({ error: 'PDF generation failed' });
   }
 });
@@ -212,6 +234,7 @@ router.post('/excel', async (req, res) => {
 
     await workbook.xlsx.writeFile(filepath);
 
+    console.log(`[ReportGenerator] ✓ Excel created successfully: ${filename}`);
     res.json({ filename, path: filepath });
   } catch (error) {
     console.error('Excel generation error:', error);
@@ -227,14 +250,39 @@ router.get('/download/:filename', (req, res) => {
     const reportsDir = process.env.VERCEL ? '/tmp/reports' : join(__dirname, '../../reports');
     const filepath = join(reportsDir, filename);
 
+    console.log(`[ReportGenerator] Download requested: ${filename}`);
+    console.log(`[ReportGenerator] Looking in: ${reportsDir}`);
+
     if (!fs.existsSync(filepath)) {
+      console.error(`[ReportGenerator] ✗ File not found: ${filepath}`);
       return res.status(404).json({ error: 'Report not found' });
     }
 
-    res.download(filepath);
+    // Set proper headers for download
+    const ext = filename.split('.').pop();
+    const contentType = ext === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    
+    const fileStream = fs.createReadStream(filepath);
+    fileStream.pipe(res);
+    
+    fileStream.on('error', (error) => {
+      console.error('[ReportGenerator] ✗ Download stream error:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Download failed' });
+      }
+    });
+
+    fileStream.on('end', () => {
+      console.log(`[ReportGenerator] ✓ Download completed: ${filename}`);
+    });
   } catch (error) {
-    console.error('Download error:', error);
-    res.status(500).json({ error: 'Download failed' });
+    console.error('[ReportGenerator] ✗ Download error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Download failed' });
+    }
   }
 });
 

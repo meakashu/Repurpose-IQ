@@ -3,7 +3,6 @@
 ## Prerequisites
 
 - Node.js 18+ and npm
-- Python 3.8+
 - Groq API key (for LLM)
 - OpenAI API key (optional, for vision features)
 
@@ -13,20 +12,19 @@
 
 ### Root Directory (Node.js Backend)
 ```bash
-npm install socket.io socket.io-client node-cron chart.js react-chartjs-2 d3 react-force-graph
+npm install
 ```
 
-### Python Service
+### Python Service (Optional)
 ```bash
 cd python-service
-pip install scikit-learn joblib networkx neo4j
 pip install -r requirements.txt
 ```
 
 ### Client (Frontend)
 ```bash
 cd client
-npm install socket.io-client chart.js react-chartjs-2 d3 react-force-graph
+npm install
 ```
 
 ---
@@ -44,20 +42,12 @@ JWT_SECRET=your-secret-key-here
 # Client
 CLIENT_URL=http://localhost:5173
 
-# Python Service
-PYTHON_SERVICE_URL=http://localhost:8000
-
 # APIs
 GROQ_API_KEY=your-groq-api-key
 OPENAI_API_KEY=your-openai-api-key  # Optional, for vision features
 
 # Database
 DB_PATH=./data/pharma.db
-
-# Neo4j (Optional)
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=password
 ```
 
 ---
@@ -71,27 +61,23 @@ node server/database/init.js
 
 ---
 
-## Step 4: Start All Services
+## Step 4: Start Services
 
-### Terminal 1: Node.js Server
+### Terminal 1: Node.js Server (Backend + API)
 ```bash
 npm run server
 # or
 node server/index.js
 ```
 
-### Terminal 2: Python Service
-```bash
-cd python-service
-uvicorn main:app --reload --port 8000
-```
-
-### Terminal 3: Frontend
+### Terminal 2: Frontend
 ```bash
 npm run client
 # or
 cd client && npm run dev
 ```
+
+**Note:** Python service is optional. The system works with Node.js backend only. Python service provides additional features but has fallbacks.
 
 ---
 
@@ -106,11 +92,10 @@ cd client && npm run dev
 
 ## ✅ Verification
 
-Check all services are running:
+Check services are running:
 
 1. **Node.js Server:** `http://localhost:3000/api/health`
-2. **Python Service:** `http://localhost:8000/api/health`
-3. **Frontend:** `http://localhost:5173`
+2. **Frontend:** `http://localhost:5173`
 
 ---
 

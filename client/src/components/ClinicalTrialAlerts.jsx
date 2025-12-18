@@ -13,12 +13,17 @@ export default function ClinicalTrialAlerts() {
 
   useEffect(() => {
     // Initialize WebSocket connection
+    // On Vercel, WebSocket may not work - use REST API fallback
+    // On Vercel, use relative path; in dev, use localhost
     const apiUrl = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? window.location.origin : 'http://localhost:3000');
     const newSocket = io(apiUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
+      reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 5
+      timeout: 20000,
+      // Gracefully handle WebSocket failures on Vercel
+      forceNew: false
     });
     
     newSocket.on('connect', () => {

@@ -14,6 +14,8 @@ import DemoModeBanner from '../components/DemoModeBanner';
 import StrategicReasoning from '../components/StrategicReasoning';
 import MasterAgentDecisionFlow from '../components/MasterAgentDecisionFlow';
 import { AutoChartRenderer } from '../components/ChartVisualizations';
+import MultiCriteriaRadarChart from '../components/RadarChart';
+import DecisionHeatmap from '../components/DecisionHeatmap';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -274,6 +276,10 @@ export default function Chat() {
       if (response.data.strategicReasoning) {
         setStrategicReasoning(response.data.strategicReasoning);
       }
+      // Store chart data if available
+      if (response.data.chartData) {
+        // Chart data will be passed to AutoChartRenderer
+      }
 
       // Simulate streaming effect
       const responseText = response.data.response || '';
@@ -329,7 +335,8 @@ export default function Chat() {
             role: 'assistant',
             content: responseText,
             agents: response.data.agents,
-            strategicReasoning: response.data.strategicReasoning
+            strategicReasoning: response.data.strategicReasoning,
+            chartData: response.data.chartData || null
           }]);
           setStreamingText('');
           setLoading(false);
@@ -436,11 +443,18 @@ export default function Chat() {
 
       const response = await api.post(`/reports/${format.toLowerCase()}`, payload);
 
-      const link = document.createElement('a');
+      // Download report - use relative path for Vercel compatibility
       const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? window.location.origin : '');
-      link.href = `${apiBase}/api/reports/download/${response.data.filename}`;
+      const downloadUrl = `${apiBase}/api/reports/download/${response.data.filename}`;
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.href = downloadUrl;
       link.download = response.data.filename;
+      link.target = '_blank'; // Open in new tab as fallback
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
 
       toast.success(`${format} report generated and downloaded!`);
     } catch (error) {
@@ -643,10 +657,23 @@ export default function Chat() {
                     
                     {/* Charts/Visualizations */}
                     {msg.role === 'assistant' && (
-                      <div className="mb-4">
+                      <div className="mb-4 space-y-4">
+                        {/* Render both radar and heatmap if available */}
+                        {msg.chartData && (
+                          <>
+                            {msg.chartData.radarChart && (
+                              <MultiCriteriaRadarChart data={msg.chartData.radarChart} />
+                            )}
+                            {msg.chartData.heatmap && (
+                              <DecisionHeatmap data={msg.chartData.heatmap} />
+                            )}
+                          </>
+                        )}
+                        {/* Fallback to auto-detection */}
                         <AutoChartRenderer 
                           content={msg.content} 
                           agentType={msg.agents?.[0]?.toLowerCase() || ''}
+                          chartData={msg.chartData || null}
                         />
                       </div>
                     )}

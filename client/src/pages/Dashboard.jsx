@@ -53,11 +53,18 @@ export default function Dashboard() {
         }
       });
 
-      const link = document.createElement('a');
+      // Download report - use relative path for Vercel compatibility
       const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? window.location.origin : '');
-      link.href = `${apiBase}/api/reports/download/${response.data.filename}`;
+      const downloadUrl = `${apiBase}/api/reports/download/${response.data.filename}`;
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.href = downloadUrl;
       link.download = response.data.filename;
+      link.target = '_blank'; // Open in new tab as fallback
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
 
       toast.dismiss();
       toast.success('Report downloaded!');

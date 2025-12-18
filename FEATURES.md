@@ -28,11 +28,11 @@
 
 ### Multi-Agent Architecture Diagram
 
-![Architecture Diagram](../screenshots/architecture_diagram.png)
+![Architecture Diagram](assets/screenshots/architecture_diagram.png)
 
 ### Data Flow Diagram
 
-![Data Flow](../screenshots/data_flow_diagram.png)
+![Data Flow](assets/screenshots/data_flow_diagram.png)
 
 ### Architecture Components
 
@@ -58,7 +58,7 @@ Strategic query interface supporting text, voice, image, and document inputs wit
 
 ### Screenshot
 
-![Chat Interface](../screenshots/features/01_chat_interface.png)
+![Chat Interface](assets/screenshots/features/01_chat_interface.png)
 
 ### Implementation Details
 
@@ -151,10 +151,10 @@ Central orchestrator coordinating 8 specialized worker agents with intelligent r
 
 ### Screenshots
 
-![Query Input](../screenshots/features/02_query_input.png)
+![Query Input](assets/screenshots/features/02_query_input.png)
 *User enters pharmaceutical query*
 
-![Agent Orchestration](../screenshots/features/03_agent_orchestration.png)
+![Agent Orchestration](assets/screenshots/features/03_agent_orchestration.png)
 *Live agent orchestration showing parallel execution*
 
 ### Implementation Details
@@ -981,10 +981,10 @@ router.get('/', (req, res) => {
 
 ### Screenshots
 
-![Dashboard](../screenshots/features/04_dashboard.png)
+![Dashboard](assets/screenshots/features/04_dashboard.png)
 *Dashboard showing KPIs and system metrics*
 
-![Analytics](../screenshots/features/05_analytics.png)
+![Analytics](assets/screenshots/features/05_analytics.png)
 *Analytics page with trend visualizations*
 
 ### Implementation Details
@@ -1036,7 +1036,7 @@ router.get('/', (req, res) => {
 
 ### Screenshot
 
-![Knowledge Graph](../screenshots/features/06_knowledge_graph.png)
+![Knowledge Graph](assets/screenshots/features/06_knowledge_graph.png)
 *Interactive drug-disease relationship network*
 
 ### Implementation Details

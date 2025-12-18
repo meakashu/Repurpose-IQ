@@ -24,9 +24,35 @@ app.use(helmet({
   contentSecurityPolicy: false, // Allow inline scripts for Vercel
 }));
 app.use(compression());
+// CORS configuration for Vercel
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  process.env.VERCEL_URL,
+  process.env.NEXT_PUBLIC_VERCEL_URL,
+  'http://localhost:5173',
+  'http://localhost:3000'
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || process.env.VERCEL_URL || '*',
-  credentials: true
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is allowed
+    if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } else {
+      // For production, allow Vercel domains
+      if (origin.includes('.vercel.app') || origin.includes('.vercel.dev')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -34,16 +60,20 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Initialize database (for Vercel, we'll use a serverless-compatible approach)
 import { initDatabase, seedDatabase } from '../server/database/db.js';
 
-// Initialize database on first request
+// Initialize database on first request (Vercel serverless functions are stateless)
+// Each function invocation may need to reinitialize, but we'll cache per instance
 let dbInitialized = false;
 function ensureDatabase() {
   if (!dbInitialized) {
     try {
+      console.log('[Vercel] Initializing database...');
       initDatabase();
       seedDatabase();
       dbInitialized = true;
+      console.log('[Vercel] Database initialized successfully');
     } catch (error) {
-      console.error('Database initialization error:', error);
+      console.error('[Vercel] Database initialization error:', error);
+      // Don't throw - allow app to continue (database might already exist)
     }
   }
 }
@@ -136,6 +166,10 @@ app.use((err, req, res, next) => {
     ...(process.env.DEBUG === 'true' && { stack: err.stack })
   });
 });
+
+// Note: WebSocket is not supported in Vercel serverless functions
+// Socket.io will gracefully degrade to polling or fail silently
+// Real-time features will use REST API fallback on Vercel
 
 // Export for Vercel
 export default app;
