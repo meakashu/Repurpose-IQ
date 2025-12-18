@@ -1,5 +1,5 @@
 <!-- Live Demo Badge (shown at the very top on GitHub) -->
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-success?style=for-the-badge&logo=vercel)](https://repurpose-iq-stys-git-main-akash-singhs-projects-9d2c0a91.vercel.app/)
+[![Live Demo](https://img.shields.io/badge/Live%20Prototype-https%3A%2F%2Frepurpose--iq--stys.vercel.app-brightgreen?style=for-the-badge&logo=vercel)](https://repurpose-iq-stys.vercel.app/)
 
 # RepurposeIQ 🧬
 
