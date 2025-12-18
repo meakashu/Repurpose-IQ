@@ -9,7 +9,7 @@
     "server": "nodemon server/index.js",
     "client": "cd client && npm run dev",
     "build": "cd client && npm install && npm run build",
-    "vercel-build": "npm install && cd client && npm install && npm run build",
+    "vercel-build": "npm install && cd client && npm install && npm run build && cd ..",
     "start": "node server/index.js",
     "install-all": "npm install && cd client && npm install"
   },
