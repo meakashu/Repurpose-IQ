@@ -53,5 +53,10 @@
         }
       ]
     }
+  ],
+  "ignore": [
+    "python-service/**",
+    "Dockerfile",
+    "docker-compose.yml"
   ]
 }
