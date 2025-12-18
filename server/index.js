@@ -91,12 +91,23 @@ app.use('/api/graph', graphRoutes);
 import predictionsRoutes from './routes/predictions.js';
 app.use('/api/predictions', predictionsRoutes);
 
-// Health check
+// Health check with backend diagnostics for local dev
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    version: '2.0.0'
+    version: '2.0.0',
+    environment: process.env.NODE_ENV || 'development',
+    clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
+    groqConfigured: !!process.env.GROQ_API_KEY,
+    features: {
+      chat: true,
+      dashboard: true,
+      monitoring: true,
+      knowledgeGraph: true,
+      reports: true,
+      analytics: true,
+    },
   });
 });
 

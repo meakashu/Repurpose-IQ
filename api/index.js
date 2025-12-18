@@ -123,14 +123,24 @@ app.use('/api/user', userRoutes);
 app.use('/api/graph', graphRoutes);
 app.use('/api/predictions', predictionsRoutes);
 
-// Health check
+// Health check with backend diagnostics for Vercel
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     version: '2.0.0',
     environment: process.env.NODE_ENV || 'production',
-    vercel: !!process.env.VERCEL
+    vercel: !!process.env.VERCEL,
+    clientUrl: process.env.CLIENT_URL || null,
+    groqConfigured: !!process.env.GROQ_API_KEY,
+    features: {
+      chat: true,
+      dashboard: true,
+      monitoring: true,
+      knowledgeGraph: true,
+      reports: true,
+      analytics: true,
+    },
   });
 });
 

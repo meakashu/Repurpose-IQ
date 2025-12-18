@@ -483,7 +483,8 @@ unmet_need_score = (
 
 ## 📹 Demo Video
 
-🎥 **[4-Minute Walkthrough Video](#)** *(Link to be added)*
+🎥 **[4-Minute Walkthrough Video](https://youtu.be/Mg9pWK6LoZI?si=1I-41vl6fLR48-GG)**  
+Hosted on YouTube for EY Techathon judges and reviewers.
 
 **What the video demonstrates:**
 1. Live query processing (Metformin repurposing)

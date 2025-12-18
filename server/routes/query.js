@@ -11,14 +11,24 @@ import jwt from 'jsonwebtoken';
 
 const verifyAuth = (req, res, next) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    const token = typeof authHeader === 'string' ? authHeader.replace('Bearer ', '') : null;
+
     if (!token) {
       return res.status(401).json({ error: 'No token provided' });
     }
-    req.user = jwt.verify(token, process.env.JWT_SECRET || 'secret');
-    next();
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+      req.user = decoded;
+      return next();
+    } catch (err) {
+      console.error('JWT verification failed in verifyAuth:', err.message);
+      return res.status(401).json({ error: 'Invalid token' });
+    }
   } catch (error) {
-    res.status(401).json({ error: 'Invalid token' });
+    console.error('verifyAuth error:', error);
+    return res.status(401).json({ error: 'Authentication error' });
   }
 };
 

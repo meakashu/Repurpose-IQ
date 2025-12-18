@@ -9,6 +9,7 @@ import {
 } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
+import BackendStatusCard from '../components/BackendStatusCard';
 
 export default function Settings() {
   const { currentTheme, themes, setTheme } = useThemeStore();
@@ -78,6 +79,9 @@ export default function Settings() {
           </div>
         </div>
       </div>
+
+      {/* Backend status / system health */}
+      <BackendStatusCard />
 
       {/* Theme Selection */}
       <div className="medical-card">
