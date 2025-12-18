@@ -59,19 +59,17 @@ In a production environment, set the GROQ_API_KEY environment variable to enable
     
     return content;
   } catch (error) {
-    console.error('[Groq AI] API Error:', error);
-    
-    // Provide more specific error messages
-    if (error.message && error.message.includes('GROQ_API_KEY')) {
-      throw new Error(`GROQ_API_KEY environment variable is missing. Please set it in your .env file to use Groq AI.`);
-    }
-    
-    if (error.response) {
-      // Groq API returned an error response
-      throw new Error(`Groq API error (${error.response.status}): ${error.response.data?.error?.message || error.message}`);
-    }
-    
-    throw new Error(`Groq API error: ${error.message}`);
+    console.error('[Groq AI] API Error, falling back to demo response:', error);
+
+    // On Vercel / production, never break the user flow because of Groq errors.
+    // Instead, return a clear simulated response explaining the situation.
+    return `
+Groq AI is temporarily unavailable or not fully configured for this deployment, so you are seeing a **simulated demo response** instead of a live Groq answer.
+
+Internal error details: ${error.message}
+
+The rest of the RepurposeIQ pipeline (multi-agent orchestration, mock IQVIA/USPTO/ClinicalTrials data, dashboards, reports) continues to work normally.
+`;
   }
 }
 
